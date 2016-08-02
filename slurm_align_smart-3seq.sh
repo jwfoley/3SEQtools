@@ -7,7 +7,7 @@
 
 samtools_path=samtools
 star_path=STAR
-umi_trim_path='python ~/script/umi_homopolymer.py'
+umi_trim_path='pypy ~/script/umi_homopolymer.py'
 dedup_path='python ~/umi-bayes/dedup.py -a naive'
 unzip_path='pigz -dc'
 tmp_dir='$LOCAL_SCRATCH'
