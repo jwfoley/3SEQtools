@@ -13,19 +13,20 @@ N_thread=8
 N_A=8
 N_mismatch=1
 star_options='--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outFilterType BySJout --outFilterMultimapNmax 1 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000' # ENCODE options per manual, except no multimappers reported
-time='1:00:00'
+time='6:00:00'
 mail_type='FAIL'
 
 
-if [ ! -n "$2" ]
+if [ ! -n "$3" ]
 then
-	echo "usage: $(basename $0) genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..."
+	echo "usage: $(basename $0) genome_dir length file1.fastq.gz file2.fastq.gz file3.fastq.gz ..."
 	exit 1
 fi
 
 wd=$(pwd)
 genome_dir=$(readlink -f $1)
-shift 1
+length=$2
+shift 2
 
 
 for fastq_file in "$@"
@@ -35,7 +36,7 @@ do
 	echo "#! /bin/bash
 		set -euo pipefail
 		cd $tmp_dir
-		$unzip_path $fastq | $homopolymer_trim_path -p $N_A -m $N_mismatch 2> $wd/$rootname\_homopolymer_trim.log | $star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 10 $star_options | tee $wd/$rootname.bam | $samtools_path index /dev/stdin $wd/$rootname.bai
+		$unzip_path $fastq | $homopolymer_trim_path -p $N_A -m $N_mismatch -L $length 2> $wd/$rootname\_homopolymer_trim.log | $star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 10 $star_options | tee $wd/$rootname.bam | $samtools_path index /dev/stdin $wd/$rootname.bai
 		cp Log.final.out $wd/$rootname\_star.log
 " | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname\_align_job.log --time=$time --mail-type=$mail_type
 done
