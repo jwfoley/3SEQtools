@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import sys, re, argparse
-from collections import OrderedDict
 
 parser = argparse.ArgumentParser(description = 'given a list of STAR log files ("Log.final.out"), aggregate the numbers into one table\nexpects they all have the same fields in the same order')
 parser.add_argument('log_files', nargs = '*')
