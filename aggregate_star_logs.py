@@ -30,7 +30,7 @@ for log_file in args.log_files:
 	first_file = False
 
 # write output
-print('\t'.join([''] + args.log_files))
-for field, value_list in zip(fields, values):
-	print('\t'.join([field] + value_list))
+print('\t'.join(['library'] + fields))
+for i in range(len(args.log_files)):
+	print('\t'.join([args.log_files[i]] + [value_list[i] for value_list in values]))
 
