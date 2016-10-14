@@ -10,7 +10,7 @@ parser.add_argument('-b', '--homopolymer_base', action = 'store', type = str, de
 parser.add_argument('-p', '--homopolymer_length', action = 'store', type = int, default = 8, help = 'minimum homopolymer length for detecting a stretch to trim')
 parser.add_argument('-m', '--mismatches', action = 'store', type = int, default = 1, help = 'number of allowed mismatches in homopolymer')
 parser.add_argument('-l', '--min_length', action = 'store', type = int, default = 1, help = 'minimum length of sequences to keep')
-parser.add_argument('-L', '--max_length', action = 'store', type = int, default = 0, help = 'maximum length of sequences to keep (truncate if necessary), 0 for no limit')
+parser.add_argument('-L', '--truncate_length', action = 'store', type = int, default = 0, help = 'length to truncate sequences (before trimming) , 0 for no truncation')
 parser.add_argument('infile', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
 parser.add_argument('outfile', action = 'store', nargs = '?', type = argparse.FileType('w'), default = sys.stdout)
 args = parser.parse_args()
@@ -19,6 +19,13 @@ assert(len(args.homopolymer_base) == 1)
 read_counter = 0
 read_length_counter = Counter()
 for read in SeqIO.parse(args.infile, 'fastq'):
+
+	# truncate read
+	if args.truncate_length != 0:
+		qualities = read.letter_annotations['phred_quality']
+		read.letter_annotations = {} # letter annotations must be emptied before changing sequence
+		read.seq = read.seq[:args.truncate_length]
+		read.letter_annotations['phred_quality'] = qualities[:args.truncate_length]
 	
 	# find A stretch
 	polya_pos = len(read.seq)
@@ -33,9 +40,8 @@ for read in SeqIO.parse(args.infile, 'fastq'):
 	if polya_pos >= args.min_length: # don't write if too short
 		qualities = read.letter_annotations['phred_quality']
 		read.letter_annotations = {} # letter annotations must be emptied before changing sequence
-		trim_pos = min(polya_pos, args.max_length) if args.max_length else polya_pos
-		read.seq = read.seq[:trim_pos]
-		read.letter_annotations['phred_quality'] = qualities[:trim_pos]
+		read.seq = read.seq[:polya_pos]
+		read.letter_annotations['phred_quality'] = qualities[:polya_pos]
 		args.outfile.write(read.format('fastq'))
 	
 	read_counter += 1
