@@ -35,7 +35,11 @@ do
 	echo "#! /bin/bash
 		set -euo pipefail
 		cd $tmp_dir
-		$unzip_path $fastq | $homopolymer_trim_path -p $N_A -m $N_mismatch 2> $wd/$rootname\_homopolymer_trim.log | $star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 10 $star_options | tee $wd/$rootname.bam | $samtools_path index /dev/stdin $wd/$rootname.bai
+		$unzip_path $fastq |
+			$homopolymer_trim_path -p $N_A -m $N_mismatch 2> $wd/$rootname\_homopolymer_trim.log |
+			$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 10 $star_options |
+			tee $wd/$rootname.bam |
+			$samtools_path index /dev/stdin $wd/$rootname.bai
 		cp Log.final.out $wd/$rootname\_star.log
 " | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname\_align_job.log --time=$time --mail-type=$mail_type
 done
