@@ -36,7 +36,7 @@ do
 		set -euo pipefail
 		cd $tmp_dir
 		$unzip_path $fastq |
-			$homopolymer_trim_path -p $N_A -m $N_mismatch 2> $wd/$rootname\_homopolymer_trim.log |
+			$homopolymer_trim_path -p $N_A -m $N_mismatch 2> $wd/$rootname\_trim.log |
 			$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 10 $star_options |
 			tee $wd/$rootname.bam |
 			$samtools_path index /dev/stdin $wd/$rootname.bai
