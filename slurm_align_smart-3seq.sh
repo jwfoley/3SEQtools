@@ -47,6 +47,7 @@ do
 			$dedup_path 2> $wd/$rootname\_umi.log |
 			tee $wd/$rootname.bam |
 			$samtools_path index /dev/stdin $wd/$rootname.bai
+		touch $wd/$rootname.bai
 		cp Log.final.out $wd/$rootname\_star.log
 " | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname\_align_job.log --time=$time --mail-type=$mail_type
 done
