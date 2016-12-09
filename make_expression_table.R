@@ -1,6 +1,6 @@
 #! /usr/bin/Rscript
 
-# given a group of BAM files from 3SEQ, make an Excel-compatible file containing read counts and DESeq2-normalized (blind rlog) gene expression values
+# given a group of BAM files from 3SEQ, make an Excel-compatible file containing read counts, transcripts per million (TPM), and DESeq2-normalized (blind rlog) gene expression values
 # assumes an Ensembl/GENCODE GTF annotation file
 
 command.args <- commandArgs(trailingOnly = T)
@@ -48,15 +48,19 @@ colnames(gene.counts) <- library.names
 colnames(gene.rlogs) <- library.names
 rownames(gene.rlogs) <- rownames(gene.counts)
 
+gene.tpm <- t(apply(gene.counts, 1, function(x) x / colSums(gene.counts) * 1E6))
+
+
 save.image("make_expression_table.RData")
 
 WriteXLS(
 	list(
 		data.frame("Ensembl ID" = ensembl.gene.id, "gene name" = gene.name, gene.counts, check.names = F),
+		data.frame("Ensembl ID" = ensembl.gene.id, "gene name" = gene.name, round(gene.tpm, 1), check.names = F),
 		data.frame("Ensembl ID" = ensembl.gene.id, "gene name" = gene.name, round(gene.rlogs, 3), check.names = F)
 	),
 	ExcelFileName =  "gene_expression.xlsx",
-	SheetNames =     c("count", "rlog"),
+	SheetNames =     c("count", "TPM", "rlog"),
 	AdjWidth =       T,
 	BoldHeaderRow =  T,
 	FreezeRow =      1,
