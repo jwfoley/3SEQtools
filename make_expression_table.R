@@ -26,8 +26,7 @@ feature.counts <- featureCounts(
 	annot.ext =            annotation.file,
 	isGTFAnnotationFile =  T,
 	strandSpecific =       1,
-	nthreads =             detectCores(),
-	tmpDir =               "/tmp"
+	nthreads =             detectCores()
 )
 
 gene.counts <- feature.counts$counts
