@@ -66,7 +66,7 @@ for name, seq, qualities in readfq(args.infile):
 	# find A stretch
 	polya_pos = len(seq)
 	if not args.homopolymer_length == 0:
-		for pos in range(len(seq)):
+		for pos in range(len(seq) - args.homopolymer_length + 1):
 			if seq[pos] == args.homopolymer_base and seq[pos:(pos + args.homopolymer_length)].count(args.homopolymer_base) >= args.homopolymer_length - args.mismatches:
 				polya_pos = pos
 				break
