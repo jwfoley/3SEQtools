@@ -1,8 +1,45 @@
 #!/usr/bin/env python3
 
 import argparse, sys
-from Bio import SeqIO
 from collections import Counter
+
+# from Readfq by Heng Li, https://github.com/lh3/readfq
+# yields reads as tuples of name, sequence, qualities (all strings)
+def readfq(fp): # this is a generator function
+	last = None # this is a buffer keeping the last unprocessed line
+	while True: # mimic closure; is it a bad idea?
+		if not last: # the first record or a record following a fastq
+			for l in fp: # search for the start of the next record
+				if l[0] in '>@': # fasta/q header line
+					last = l[:-1] # save this line
+					break
+		if not last: break
+		name, seqs, last = last[1:].partition(" ")[0], [], None
+		for l in fp: # read the sequence
+			if l[0] in '@+>':
+				last = l[:-1]
+				break
+			seqs.append(l[:-1])
+		if not last or last[0] != '+': # this is a fasta record
+			yield name, ''.join(seqs), None # yield a fasta record
+			if not last: break
+		else: # this is a fastq record
+			seq, leng, seqs = ''.join(seqs), 0, []
+			for l in fp: # read the quality
+				seqs.append(l[:-1])
+				leng += len(l) - 1
+				if leng >= len(seq): # have read enough quality
+					last = None
+					yield name, seq, ''.join(seqs); # yield a fastq record
+					break
+			if last: # reach EOF before reading enough quality
+				yield name, seq, None # yield a fasta record instead
+				break
+# end of Readfq
+
+def writefq (name, seq, qualities):
+	return '@%s\n%s\n+\n%s\n' % (name, seq, qualities)
+
 
 # parse arguments
 parser = argparse.ArgumentParser(description = 'for 3SEQ-like reads in FASTQ format, trim 3\' homopolymers (e.g. polyA tails) and whatever follows them')
@@ -18,31 +55,27 @@ assert(len(args.homopolymer_base) == 1)
 
 read_counter = 0
 read_length_counter = Counter()
-for read in SeqIO.parse(args.infile, 'fastq'):
+for name, seq, qualities in readfq(args.infile):
 
 	# truncate read
 	if args.truncate_length != 0:
-		qualities = read.letter_annotations['phred_quality']
-		read.letter_annotations = {} # letter annotations must be emptied before changing sequence
-		read.seq = read.seq[:args.truncate_length]
-		read.letter_annotations['phred_quality'] = qualities[:args.truncate_length]
+		seq = seq[:args.truncate_length]
+		qualities = qualities[:args.truncate_length]
 	
 	# find A stretch
-	polya_pos = len(read.seq)
+	polya_pos = len(seq)
 	if not args.homopolymer_length == 0:
-		for pos in range(len(read.seq)):
-			if read.seq[pos] == args.homopolymer_base and read.seq[pos:(pos + args.homopolymer_length)].count(args.homopolymer_base) >= args.homopolymer_length - args.mismatches:
+		for pos in range(len(seq)):
+			if seq[pos] == args.homopolymer_base and seq[pos:(pos + args.homopolymer_length)].count(args.homopolymer_base) >= args.homopolymer_length - args.mismatches:
 				polya_pos = pos
 				break
 	read_length_counter[polya_pos] += 1
 	
 	# write trimmed read
 	if polya_pos >= args.min_length: # don't write if too short
-		qualities = read.letter_annotations['phred_quality']
-		read.letter_annotations = {} # letter annotations must be emptied before changing sequence
-		read.seq = read.seq[:polya_pos]
-		read.letter_annotations['phred_quality'] = qualities[:polya_pos]
-		args.outfile.write(read.format('fastq'))
+		seq = seq[:polya_pos]
+		qualities = qualities[:polya_pos]
+		args.outfile.write(writefq(name, seq, qualities))
 	
 	read_counter += 1
 args.infile.close()
