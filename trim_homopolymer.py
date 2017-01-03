@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from __future__ import print_function
 import argparse, sys
 from collections import Counter
 
@@ -80,11 +81,11 @@ for name, seq, qualities in readfq(args.infile):
 	read_counter += 1
 
 # print read count
-sys.stderr.write('%i reads processed\n\n' % read_counter)
+print('%i reads processed\n' % read_counter, file = sys.stderr)
 
 # print insert length frequency
 if not args.homopolymer_length == 0:
-	sys.stderr.write('trimmed read length counts\n')
+	print('trimmed read length counts', file = sys.stderr)
 	for (length, count) in sorted(read_length_counter.items()):
-		sys.stderr.write('%i\t%i\n' % (length, count))
+		print('%i\t%i' % (length, count), file = sys.stderr)
 
