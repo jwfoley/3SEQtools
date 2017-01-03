@@ -78,8 +78,6 @@ for name, seq, qualities in readfq(args.infile):
 		args.outfile.write(writefq(name, seq, qualities))
 	
 	read_counter += 1
-args.infile.close()
-args.outfile.close()
 
 # print read count
 sys.stderr.write('%i reads processed\n\n' % read_counter)
