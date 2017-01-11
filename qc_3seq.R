@@ -4,21 +4,22 @@ library(reshape2)
 library(scales)
 library(ggplot2)
 
+
+# define functions
+
 filename.suffix <- list(
 	trim =   "_trim.log",
-	align =  "_align.log",
+	align =  "_align.log"
 )
 
 category.colors <- c(
-	"uniquely aligned" =  "green",
+	"uniquely aligned" =  "green3",
 	"multiply aligned" =  "darkgreen",
 	"other" =             "yellow3",
-	"too short" =         "yellow",
+	"too short" =         "yellow2",
 	"no insert" =         "darkred",
-	"no header" =         "red"
+	"no header" =         "red2"
 )
-
-libraries <- sub(filename.suffix$trim, "", Sys.glob(paste0("*", filename.suffix$trim))) # test
 
 get.filename <- function(library.name, suffix.name) paste0(library.name, filename.suffix[[suffix.name]])
 
@@ -61,6 +62,7 @@ get.read.categories <- function(libraries) t(sapply(libraries, function(library.
 
 plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	result.frame <- melt(read.category.counts[,-1], varnames = c("library", "category"), value.name = "reads", as.is = T)
+	result.frame$library <- factor(result.frame$library, levels = rownames(read.category.counts))
 	result.frame$category <- factor(result.frame$category, levels = c("no header", "no insert", "too short", "other", "multiply aligned", "uniquely aligned"))
 	if (normalize) {
 		ggplot(result.frame) +
@@ -83,3 +85,20 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	}
 }
 
+
+
+# run script on libraries provided as command-line arguments
+libraries <- commandArgs(trailingOnly = T)
+if (length(libraries) > 0) {
+	for (suffix in filename.suffix) libraries <- sub(suffix, "", libraries)
+	cat("found libraries:\n")
+	for (library in libraries) cat(library, "\n")
+
+	read.category.counts <- get.read.categories(libraries)
+	read.category.count.plot <- plot.read.categories(read.category.counts)
+	read.category.percent.plot <- plot.read.categories(read.category.counts, normalize = T)
+
+	save.image("qc_3seq.RData")
+	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = 10, height = 7.5)
+	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = 10, height = 7.5)
+}
