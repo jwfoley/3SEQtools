@@ -98,6 +98,7 @@ if (length(libraries) > 0) {
 	read.category.count.plot <- plot.read.categories(read.category.counts)
 	read.category.percent.plot <- plot.read.categories(read.category.counts, normalize = T)
 
+	write.table(read.category.counts, "read_category_count.tsv", quote = F, sep = "\t", col.names = NA)
 	save.image("qc_3seq.RData")
 	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = 10, height = 7.5)
 	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = 10, height = 7.5)
