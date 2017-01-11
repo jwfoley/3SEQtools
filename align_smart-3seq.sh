@@ -55,7 +55,7 @@ do
 		tee >($checksum_path | sed "s/-$/$rootname.bam/" > $wd/$rootname.bam.$checksum_suffix) |
 		$samtools_path index /dev/stdin $wd/$rootname.bai
 	touch $wd/$rootname.bai
-	cp Log.final.out $wd/$rootname\_star.log
+	cp Log.final.out $wd/$rootname\_align.log
 	
 	echo 'done' >&2
 done
