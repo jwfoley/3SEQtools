@@ -18,8 +18,6 @@ N_G=3
 N_A=8
 N_mismatch=1
 star_options='--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outFilterType BySJout --outFilterMultimapNmax 1 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000' # ENCODE options per manual, except no multimappers reported
-checksum_path=sha256sum
-checksum_suffix=sha256
 time='1:00:00'
 mail_type='FAIL'
 
@@ -48,7 +46,6 @@ do
 			$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 $star_options |
 			$dedup_path 2> $wd/$rootname\_umi.log |
 			tee $wd/$rootname.bam |
-			tee >($checksum_path | sed \"s/-$/$rootname.bam/\" > $wd/$rootname.bam.$checksum_suffix) |
 			$samtools_path index /dev/stdin $wd/$rootname.bai
 		touch $wd/$rootname.bai
 		cp Log.final.out $wd/$rootname\_align.log
