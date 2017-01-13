@@ -8,7 +8,7 @@
 samtools_path=samtools
 star_path=STAR
 umi_trim_path='pypy ~/3SEQtools/umi_homopolymer.py'
-dedup_path='python ~/umi-bayes/dedup.py -a naive'
+dedup_path='python3 ~/umi-bayes/dedup.py -qa naive'
 unzip_path='pigz -dc'
 tmp_dir='$LOCAL_SCRATCH'
 modules='python/3.3.2'
