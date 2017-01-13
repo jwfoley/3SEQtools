@@ -6,7 +6,7 @@
 
 samtools_path=samtools
 star_path=STAR
-homopolymer_trim_path='pypy ~/script/trim_homopolymer.py'
+homopolymer_trim_path='pypy ~/3SEQtools/trim_homopolymer.py'
 unzip_path='pigz -dc'
 tmp_dir='$LOCAL_SCRATCH'
 N_thread=8

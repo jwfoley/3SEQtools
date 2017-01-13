@@ -8,7 +8,7 @@
 
 samtools_path=samtools
 star_path=STAR
-umi_trim_path='pypy ~/script/umi_homopolymer.py'
+umi_trim_path='pypy ~/3SEQtools/umi_homopolymer.py'
 unzip_path='pigz -dc'
 tmp_dir='/tmp/align_smart-3seq_tmp'
 N_thread=$(nproc)
