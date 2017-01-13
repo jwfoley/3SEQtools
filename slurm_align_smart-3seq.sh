@@ -49,6 +49,6 @@ do
 			$samtools_path index /dev/stdin $wd/$rootname.bai
 		touch $wd/$rootname.bai
 		cp Log.final.out $wd/$rootname\_align.log
-" | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname\_align_job.log --time=$time --mail-type=$mail_type
+" | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname\_job.log --time=$time --mail-type=$mail_type
 done
 
