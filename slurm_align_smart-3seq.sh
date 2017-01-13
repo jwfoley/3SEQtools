@@ -44,7 +44,7 @@ do
 		$unzip_path $fastq |
 			$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch 2> $wd/$rootname\_trim.log |
 			$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 $star_options |
-			$dedup_path 2> $wd/$rootname\_umi.log |
+			$dedup_path 2> $wd/$rootname\_dedup.log |
 			tee $wd/$rootname.bam |
 			$samtools_path index /dev/stdin $wd/$rootname.bai
 		touch $wd/$rootname.bai
