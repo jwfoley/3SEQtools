@@ -1,6 +1,7 @@
 #! /bin/bash
 
 # given a list of single-end Illumina FASTQ files and a reference genome, perform the special preprocessing for 3SEQ, align each file to the reference, then index the BAM output
+# truncates reads to a specified length before further processing, to simulate results from sequencing fewer cycles
 # removes A-tail and anything after it, defining A-tail as a run of $N_A A's with $N_mismatch mismatches allowed
 # call from directory where you want results to go
 
