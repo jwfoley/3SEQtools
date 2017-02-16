@@ -8,8 +8,8 @@ library(ggplot2)
 # define functions
 
 filename.suffix <- list(
-	trim =   "_trim.log",
-	align =  "_align.log"
+	trim =   ".trim.log",
+	align =  ".align.log"
 )
 
 category.colors <- c(

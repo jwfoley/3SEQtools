@@ -44,13 +44,13 @@ do
 		module load $modules
 		cd $tmp_dir
 		$unzip_path $fastq |
-			$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch -L $length 2> $wd/$rootname\_trim.log |
+			$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch -L $length 2> $wd/$rootname.trim.log |
 			$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 $star_options |
-			$dedup_path 2> $wd/$rootname\_dedup.log |
+			$dedup_path 2> $wd/$rootname.dedup.log |
 			tee $wd/$rootname.bam |
 			$samtools_path index /dev/stdin $wd/$rootname.bai
 		touch $wd/$rootname.bai
-		cp Log.final.out $wd/$rootname\_align.log
-" | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname\_job.log --time=$time --mail-type=$mail_type
+		cp Log.final.out $wd/$rootname.align.log
+" | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname.job.log --time=$time --mail-type=$mail_type
 done
 
