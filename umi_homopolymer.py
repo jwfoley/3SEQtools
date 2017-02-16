@@ -50,6 +50,7 @@ parser.add_argument('-g', '--g_overhang', action = 'store', type = int, default 
 parser.add_argument('-b', '--homopolymer_base', action = 'store', type = str, default = 'A', help = 'base to look for in 3\' homopolymer')
 parser.add_argument('-p', '--homopolymer_length', action = 'store', type = int, default = 10, help = 'minimum homopolymer length for detecting a stretch to trim; set to 0 to disable homopolymer trimming')
 parser.add_argument('-m', '--mismatches', action = 'store', type = int, default = 1, help = 'number of allowed mismatches in stretch of A\'s')
+parser.add_argument('-n', '--no_trim', action = 'store_true', help = 'report trimmed lengths but leave homopolymer tails intact (better for aligners with soft-clipping)')
 parser.add_argument('-l', '--min_length', action = 'store', type = int, default = 1, help = 'minimum length of sequences to keep (after trimming)')
 parser.add_argument('-L', '--truncate_length', action = 'store', type = int, default = 0, help = 'length to truncate sequences (before trimming) , 0 for no truncation')
 parser.add_argument('infile', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
@@ -81,6 +82,7 @@ for name, seq, qualities in readfq(args.infile):
 				polya_pos = pos
 				break
 	read_length_counter[polya_pos - header_length] += 1
+	if args.no_trim: polya_pos = len(seq) # reset to full length now that it's been recorded
 	
 	# write trimmed read
 	if polya_pos >= header_length + args.min_length: # don't write if too short
