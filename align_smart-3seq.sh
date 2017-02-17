@@ -2,13 +2,12 @@
 
 # given a list of single-end Illumina FASTQ files and a reference genome, perform the special preprocessing for Smart-3SEQ, align each file to the reference, then index the BAM output
 # processes Smart-3SEQ data by trimming first $N_N+$N_G bases: $N_N (the random UMI) is appended to the read name, and $N_G (the G overhang) is discarded
-# also removes A-tail and anything after it, defining A-tail as a run of $N_A A's with $N_mismatch mismatches allowed
 # call from directory where you want results to go
 # uses shared memory option in STAR; you may need to increase the kernel's shared memory limits (e.g. "sysctl -w kernel.shmmax=34359738368 kernel.shmall=8388608" in Linux)
 
 samtools_path=samtools
 star_path=STAR
-umi_trim_path='pypy ~/3SEQtools/umi_homopolymer.py'
+umi_trim_path='pypy ~/3SEQtools/umi_homopolymer.py -n'
 unzip_path='pigz -dc'
 tmp_dir='/tmp/align_smart-3seq_tmp'
 N_thread=$(nproc)
@@ -17,7 +16,7 @@ N_N=5
 N_G=3
 N_A=8
 N_mismatch=1
-star_options='--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outFilterType BySJout --outFilterMultimapNmax 1 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000' # ENCODE options per manual, except no multimappers reported
+star_options='--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outFilterType BySJout --outFilterMultimapNmax 1 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA --clip3pAdapterMMp 0.2' # ENCODE options per manual, except no multimappers reported and poly(A) clipped
 
 if [ ! -n "$2" ]
 then
