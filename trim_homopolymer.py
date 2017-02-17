@@ -43,7 +43,7 @@ def writefq (name, seq, qualities):
 
 
 # parse arguments
-parser = argparse.ArgumentParser(description = 'for 3SEQ-like reads in FASTQ format, trim 3\' homopolymers (e.g. polyA tails) and whatever follows them')
+parser = argparse.ArgumentParser(description = 'for 3SEQ-like reads in FASTQ format, trim 3\' homopolymers (e.g. polyA tails) and whatever follows them', formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-b', '--homopolymer_base', action = 'store', type = str, default = 'A', help = 'base to look for in 3\' homopolymer')
 parser.add_argument('-p', '--homopolymer_length', action = 'store', type = int, default = 8, help = 'minimum homopolymer length for detecting a stretch to trim')
 parser.add_argument('-m', '--mismatches', action = 'store', type = int, default = 1, help = 'number of allowed mismatches in homopolymer')

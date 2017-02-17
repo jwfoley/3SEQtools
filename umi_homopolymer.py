@@ -44,7 +44,7 @@ def writefq (name, seq, qualities):
 
 
 # parse arguments
-parser = argparse.ArgumentParser(description = 'for Smart-3SEQ reads in FASTQ format starting with a UMI and then a G-overhang (e.g. 5\'-NNNNNGGG-3\'), cut off both, adding the UMI to the read name and discard the G\'s; also trim 3\' homopolymers (e.g. polyA tails) and whatever follows them')
+parser = argparse.ArgumentParser(description = 'for Smart-3SEQ reads in FASTQ format starting with a UMI and then a G-overhang (e.g. 5\'-NNNNNGGG-3\'), cut off both, adding the UMI to the read name and discard the G\'s; also trim 3\' homopolymers (e.g. polyA tails) and whatever follows them', formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-u', '--umi', action = 'store', type = int, default = 5, help = 'length of UMI')
 parser.add_argument('-g', '--g_overhang', action = 'store', type = int, default = 3, help = 'length of G-overhang')
 parser.add_argument('-b', '--homopolymer_base', action = 'store', type = str, default = 'A', help = 'base to look for in 3\' homopolymer')
