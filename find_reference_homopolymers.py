@@ -47,7 +47,7 @@ def read_base (fastq): # simple generator that spits out (chr, pos, base) one at
 				yield (chrom, current_pos, base.upper())
 
 def output_region (chrom, strand, start, end): # write a region in BED format
-	args.out_bed.write('%s\t%i\t%i\t\t\t%s\n' % (chrom, start - 1, end, '+-'[strand]))
+	args.out_bed.write('%s\t%i\t%i\t.\t.\t%s\n' % (chrom, start - 1, end, '+-'[strand]))
 
 def process_region (chrom, strand, start, length, last_base_match): # find the length of a region and output if it qualifies; assume the region starts on a target base
 	length = length - 1 + last_base_match # shorten if the last base is a mismatch (which implies the previous base is not)
@@ -63,7 +63,7 @@ last_base_match = [False, False]
 for chrom, pos, base in read_base(args.in_fastq):
 	if chrom != current_chrom: # new chromosome
 		for strand in (0, 1):
-			process_region(chrom, strand, region_start[strand], region_length[strand], last_base_match[strand])
+			process_region(current_chrom, strand, region_start[strand], region_length[strand], last_base_match[strand])
 			region_start[strand] = None
 			region_length[strand] = 0
 			last_base_match[strand] = False
@@ -80,7 +80,7 @@ for chrom, pos, base in read_base(args.in_fastq):
 		
 		else:
 			if not match[strand] and not last_base_match[strand]: # end of region
-				process_region(chrom, strand, region_start[strand], region_length[strand], last_base_match[strand])
+				process_region(current_chrom, strand, region_start[strand], region_length[strand], last_base_match[strand])
 				region_start[strand] = None
 				region_length[strand] = 0
 				last_base_match[strand] = False
@@ -89,5 +89,5 @@ for chrom, pos, base in read_base(args.in_fastq):
 				last_base_match[strand] = match[strand]
 
 for strand in (0, 1):
-	process_region(chrom, strand, region_start[strand], region_length[strand], last_base_match[strand])
+	process_region(current_chrom, strand, region_start[strand], region_length[strand], last_base_match[strand])
 
