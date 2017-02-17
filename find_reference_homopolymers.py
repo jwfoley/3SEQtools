@@ -23,10 +23,7 @@ parser.add_argument('out_bed', action = 'store', nargs = '?', type = argparse.Fi
 args = parser.parse_args()
 
 target_base = args.base.upper()
-try:
-	complement = COMPLEMENTS[target_base]
-except KeyError:
-	raise NotImplementedError(('unknown base %s; options: ' % target_base) + ' '.join(COMPLEMENTS.keys()))
+complement = COMPLEMENTS[target_base]
 
 
 def read_base (fastq): # simple generator that spits out (chr, pos, base) one at a time
