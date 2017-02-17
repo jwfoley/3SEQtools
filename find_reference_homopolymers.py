@@ -2,14 +2,12 @@
 
 # simplified first pass:
 # don't look for complement on opposite strand
-# don't allow mismatches (!!!)
 # don't allow IUPAC base codes outside the usual ACGT
 
 # rules:
 # homopolymer region must be at least args.length bases long
-# at least args.proportion of bases in homopolymer region must be the target base
-# the first base of the homopolymer region must be the target base
-# the last base of the homopolymer region must be the target base
+# homopolymer region may not contain two consecutive mismatches
+
 
 import re, argparse, sys
 
