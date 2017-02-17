@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 # simplified first pass:
-# don't look for complement on opposite strand
 # don't allow IUPAC base codes outside the usual ACGT
 
 # rules:
