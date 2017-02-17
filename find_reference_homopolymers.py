@@ -16,7 +16,7 @@ COMPLEMENTS = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 CHR_HEADER = re.compile('> *(.+)')
 
 
-parser = argparse.ArgumentParser(description = 'given reference sequence in FASTA format, produce a list in BED format of homopolymers of a given base')
+parser = argparse.ArgumentParser(description = 'given reference sequence in FASTA format, produce a list in BED format of homopolymers of a given base', formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-l', '--length', action = 'store', type = int, default = 10, help = 'minimum length of homopolymer')
 parser.add_argument('-b', '--base', action = 'store', type = str, default = 'A', choices = sorted(COMPLEMENTS.keys()), help = 'target base')
 parser.add_argument('in_fastq', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
