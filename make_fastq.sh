@@ -27,6 +27,8 @@ then
 	exit 1
 fi
 
+run_folder=$(readlink -f $1)
+
 
 set -euo pipefail
 
