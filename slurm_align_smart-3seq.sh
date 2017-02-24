@@ -58,6 +58,11 @@ shift 1
 
 for fastq_file in "$@"
 do 
+	if [[ "$fastq_file" != *.fastq.gz ]]
+	then
+		echo "error: $fastq_file is not a .fastq.gz file" >&2
+		exit 1
+	fi
 	rootname=$(basename $fastq_file .fastq.gz)
 	fastq=$(readlink -f $fastq_file)
 	echo "#! /bin/bash
