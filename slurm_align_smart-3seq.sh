@@ -20,6 +20,7 @@ N_mismatch=1
 star_options='--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outFilterType BySJout --outFilterMultimapNmax 1 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA --clip3pAdapterMMp 0.2' # ENCODE options per manual, except no multimappers reported and poly(A) clipped
 time='1:00:00'
 mail_type='FAIL'
+genome_test='Genome' # check for this file to verify valid genome directory
 
 
 truncate_arg=''
@@ -51,6 +52,7 @@ fi
 
 wd=$(pwd)
 genome_dir=$(readlink -f $1)
+if [ ! -e "$genome_dir/$genome_test" ]; then echo "error: $genome_dir is not a valid STAR genome directory" >&2; exit 1; fi
 shift 1
 
 
