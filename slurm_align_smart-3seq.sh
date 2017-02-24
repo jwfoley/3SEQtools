@@ -44,7 +44,7 @@ shift $((OPTIND-1))
 
 if [ ! -n "$2" ]
 then
-	echo "usage: $(basename $0) [-n umi_length] [-g discard_length] [-t truncate_length] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..."
+	echo "usage: $(basename $0) [-n umi_length] [-g discard_length] [-t truncate_length] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..." >&2
 	exit 1
 fi
 

@@ -22,10 +22,9 @@ do
 done
 shift $((OPTIND-1))
 
-
 if [ ! -n "$1" ]
 then
-	echo "usage: $(basename $0) [-s sample_sheet] run_folder"
+	echo "usage: $(basename $0) [-s sample_sheet] run_folder" >&2
 	exit 1
 fi
 
@@ -35,6 +34,7 @@ then
 else
 	sample_sheet_arg="$run_folder/$default_sample_sheet"
 fi
+
 
 set -euo pipefail
 
