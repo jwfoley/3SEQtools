@@ -9,25 +9,32 @@ bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimme
 fastq_subdir='Data/Intensities/BaseCalls'
 default_sample_sheet=SampleSheet.csv
 
+
+sample_sheet=''
+while getopts ":s:" opt
+do
+	case $opt in
+		s)
+			if [ ! -e "$OPTARG" ]; then echo "error: $OPTARG not found" >&2; exit 1; fi
+			sample_sheet="$OPTARG"
+			;;
+	esac
+done
+shift $((OPTIND-1))
+
+
 if [ ! -n "$1" ]
 then
-	echo "usage: $(basename $0) run_folder [sample_sheet]"
+	echo "usage: $(basename $0) [-s sample_sheet] run_folder"
 	exit 1
 fi
 
-run_folder=$(readlink -f $1)
-if [ -n "$2" ]
+if [ -n $sample_sheet ]
 then
-	sample_sheet_arg="--sample-sheet $(readlink -f $2)"
+	sample_sheet_arg="$sample_sheet"
 else
-	if [ ! -e "$run_folder/$default_sample_sheet" ]
-	then
-		echo "error: $default_sample_sheet not found; provide path to sample sheet"
-		exit 1
-	fi
-	sample_sheet_arg=''
+	sample_sheet_arg="$run_folder/$default_sample_sheet"
 fi
-
 
 set -euo pipefail
 
