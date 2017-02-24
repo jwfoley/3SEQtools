@@ -7,16 +7,15 @@
 bcl2fastq_path=bcl2fastq
 bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0'
 fastq_subdir='Data/Intensities/BaseCalls'
-default_sample_sheet=SampleSheet.csv
 
 
-sample_sheet=''
+sample_sheet_arg=''
 while getopts ":s:" opt
 do
 	case $opt in
 		s)
 			if [ ! -e "$OPTARG" ]; then echo "error: $OPTARG not found" >&2; exit 1; fi
-			sample_sheet="$OPTARG"
+			sample_sheet_arg="--sample-sheet $OPTARG"
 			;;
 	esac
 done
@@ -26,13 +25,6 @@ if [ ! -n "$1" ]
 then
 	echo "usage: $(basename $0) [-s sample_sheet] run_folder" >&2
 	exit 1
-fi
-
-if [ -n $sample_sheet ]
-then
-	sample_sheet_arg="$sample_sheet"
-else
-	sample_sheet_arg="$run_folder/$default_sample_sheet"
 fi
 
 
