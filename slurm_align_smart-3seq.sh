@@ -21,10 +21,19 @@ star_options='--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outFilterT
 time='1:00:00'
 mail_type='FAIL'
 
+
 truncate_arg=''
-while getopts ":t:" opt
+while getopts ":n:g:t:" opt
 do
 	case $opt in
+		n)
+			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid UMI length" >&2; exit 1; fi
+			N_N="$OPTARG"
+			;;
+		g)
+			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid discard length" >&2; exit 1; fi
+			N_G="$OPTARG"
+			;;
 		t)
 			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid length to truncate" >&2; exit 1; fi
 			truncate_arg="-L $OPTARG"
@@ -35,9 +44,10 @@ shift $((OPTIND-1))
 
 if [ ! -n "$2" ]
 then
-	echo "usage: $(basename $0) [-t length] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..."
+	echo "usage: $(basename $0) [-n umi_length] [-g discard_length] [-t truncate_length] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..."
 	exit 1
 fi
+
 
 wd=$(pwd)
 genome_dir=$(readlink -f $1)

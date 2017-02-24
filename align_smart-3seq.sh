@@ -19,10 +19,19 @@ N_A=8
 N_mismatch=1
 star_options='--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outFilterType BySJout --outFilterMultimapNmax 1 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA --clip3pAdapterMMp 0.2' # ENCODE options per manual, except no multimappers reported and poly(A) clipped
 
+
 truncate_arg=''
-while getopts ":t:" opt
+while getopts ":n:g:t:" opt
 do
 	case $opt in
+		n)
+			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid UMI length" >&2; exit 1; fi
+			N_N="$OPTARG"
+			;;
+		g)
+			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid discard length" >&2; exit 1; fi
+			N_G="$OPTARG"
+			;;
 		t)
 			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid length to truncate" >&2; exit 1; fi
 			truncate_arg="-L $OPTARG"
@@ -33,13 +42,15 @@ shift $((OPTIND-1))
 
 if [ ! -n "$2" ]
 then
-	echo "usage: $(basename $0) [-t length] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..."
+	echo "usage: $(basename $0) [-n umi_length] [-g discard_length] [-t truncate_length] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..."
 	exit 1
 fi
+
 
 wd=$(pwd)
 genome_dir=$(readlink -f $1)
 shift 1
+
 
 set -euo pipefail
 
