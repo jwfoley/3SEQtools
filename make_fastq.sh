@@ -34,7 +34,9 @@ set -euo pipefail
 
 $bcl2fastq_path $bcl2fastq_args $sample_sheet_arg -R $run_folder
 
+echo 'moving FASTQ files to current directory...' >&2
 for fastq in $run_folder/$fastq_subdir/*.fastq.gz
 do mv $fastq $(basename $fastq | sed -r "s/_S[0-9]+_R1_001\.fastq\.gz$/.fastq.gz/") # this regex might not be foolproof
 done
+echo 'all done!' >&2
 
