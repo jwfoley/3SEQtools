@@ -6,12 +6,11 @@
 command.args <- commandArgs(trailingOnly = T)
 if (length(command.args) < 3) stop("usage: make_expression_table.R annotation.gtf library1.bam library2.bam ...")
 
-
+library(parallel)
+library(WriteXLS)
 library(Rsubread)
 library(biomaRt)
 library(DESeq2)
-library(parallel)
-library(WriteXLS)
 
 ensembl = useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl", host = "uswest.ensembl.org")
 
