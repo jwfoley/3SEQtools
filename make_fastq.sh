@@ -1,11 +1,11 @@
 #! /bin/bash
 
 # given the path to an Illumina run folder and optionally a path to a sample sheet, run bcl2fastq
-# then clean up the names of the FASTQ files and move them to the current directory
+# generates FASTQ files in the current directory and cleans up their names
 # the sample sheet argument is necessary unless it's the default $run_folder/SampleSheet.csv
 
 bcl2fastq_path=bcl2fastq
-bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0 -o .'
+bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0 -o . --stats-dir <input-dir>/Stats/ --reports-dir <input-dir>/Reports/'
 fastq_subdir='Data/Intensities/BaseCalls'
 
 
