@@ -5,7 +5,7 @@
 # the sample sheet argument is necessary unless it's the default $run_folder/SampleSheet.csv
 
 bcl2fastq_path=bcl2fastq
-bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0'
+bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0 -o .'
 fastq_subdir='Data/Intensities/BaseCalls'
 
 
@@ -33,10 +33,4 @@ run_folder=$(readlink -f $1)
 set -euo pipefail
 
 $bcl2fastq_path $bcl2fastq_args $sample_sheet_arg -R $run_folder
-
-echo 'moving FASTQ files to current directory...' >&2
-for fastq in $run_folder/$fastq_subdir/*.fastq.gz
-do mv $fastq $(basename $fastq | sed -r "s/_S[0-9]+_R1_001\.fastq\.gz$/.fastq.gz/") # this regex might not be foolproof
-done
-echo 'all done!' >&2
 
