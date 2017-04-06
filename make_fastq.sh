@@ -5,9 +5,6 @@
 # the sample sheet argument is necessary unless it's the default $run_folder/SampleSheet.csv
 
 bcl2fastq_path=bcl2fastq
-bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0 -o . --stats-dir <input-dir>/Stats/ --reports-dir <input-dir>/Reports/'
-fastq_subdir='Data/Intensities/BaseCalls'
-
 
 sample_sheet_arg=''
 while getopts ":s:" opt
@@ -32,7 +29,7 @@ run_folder=$(readlink -f $1)
 
 set -euo pipefail
 
-$bcl2fastq_path $bcl2fastq_args $sample_sheet_arg -R $run_folder
+$bcl2fastq_path --fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0 -o . --stats-dir $run_folder/Data/Intensities/BaseCalls/Stats/ --reports-dir $run_folder/Data/Intensities/BaseCalls/Reports/ $sample_sheet_arg -R $run_folder
 
 # clean up filenames
 for fastq in *.fastq.gz
