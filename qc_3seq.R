@@ -95,6 +95,7 @@ if (length(libraries) > 0) {
 	for (library in libraries) cat(library, "\n")
 
 	read.category.counts <- get.read.categories(libraries)
+	rownames(read.category.counts) <- basename(rownames(read.category.counts))
 	read.category.count.plot <- plot.read.categories(read.category.counts)
 	read.category.percent.plot <- plot.read.categories(read.category.counts, normalize = T)
 
