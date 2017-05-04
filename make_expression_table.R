@@ -48,7 +48,7 @@ colnames(gene.counts) <- library.names
 colnames(gene.rlogs) <- library.names
 rownames(gene.rlogs) <- rownames(gene.counts)
 
-gene.tpm <- t(apply(gene.counts, 1, function(x) x / colSums(gene.counts) * 1E6))
+gene.tpm <- 1E6 * sweep(gene.counts, 2, colSums(gene.counts), "/")
 
 
 save.image("make_expression_table.RData")
