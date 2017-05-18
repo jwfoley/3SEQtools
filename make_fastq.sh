@@ -5,9 +5,8 @@
 # the sample sheet argument is necessary unless it's the default $run_folder/SampleSheet.csv
 # discards "Undetermined" reads by default unless "-u" is used
 
-default_undetermined_filename='Undetermined_S0_R1_001.fastq.gz'
-
-bcl2fastq_path=bcl2fastq
+bcl2fastq_cmd='bcl2fastq --fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0'
+undetermined_filename='Undetermined_S0_R1_001.fastq.gz'
 
 sample_sheet_arg=''
 discard_undetermined=true
@@ -36,11 +35,11 @@ run_folder=$(readlink -f $1)
 
 set -euo pipefail
 
-if [ "$discard_undetermined" = true ]; then ln -s /dev/null $default_undetermined_filename; fi
-$bcl2fastq_path --fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0 -o . --stats-dir $run_folder/Data/Intensities/BaseCalls/Stats/ --reports-dir $run_folder/Data/Intensities/BaseCalls/Reports/ $sample_sheet_arg -R $run_folder
+if [ "$discard_undetermined" = true ]; then ln -s /dev/null $undetermined_filename; fi
+$bcl2fastq_cmd -o . --stats-dir $run_folder/Data/Intensities/BaseCalls/Stats/ --reports-dir $run_folder/Data/Intensities/BaseCalls/Reports/ $sample_sheet_arg -R $run_folder
 
 # clean up filenames
-if [ "$discard_undetermined" = true ]; then rm $default_undetermined_filename; fi
+if [ "$discard_undetermined" = true ]; then rm $undetermined_filename; fi
 for fastq in *.fastq.gz
 	do mv $fastq $(basename $fastq | sed -r "s/_S[0-9]+_R1_001\.fastq\.gz$/.fastq.gz/") # this regex might not be foolproof
 done
