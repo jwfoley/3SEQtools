@@ -4,7 +4,9 @@
 # optionally truncates reads to a specified length before further processing, to simulate results from sequencing fewer cycles
 # processes Smart-3SEQ data by trimming first $N_N+$N_G bases: $N_N (the random UMI) is appended to the read name, and $N_G (the G overhang) is discarded
 # call from directory where you want results to go
+# submits all tasks to SLURM in an array
 
+job_name=slurm_align_smart-3seq
 samtools_path=samtools
 star_path=STAR
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
@@ -55,28 +57,32 @@ genome_dir=$(readlink -f $1)
 if [ ! -e "$genome_dir/$genome_test" ]; then echo "error: $genome_dir is not a valid STAR genome directory" >&2; exit 1; fi
 shift 1
 
-
+fastq_files=()
 for fastq_file in "$@"
-do 
+do
 	if [[ "$fastq_file" != *.fastq.gz ]]
 	then
 		echo "error: $fastq_file is not a .fastq.gz file" >&2
 		exit 1
 	fi
-	rootname=$(basename $fastq_file .fastq.gz)
-	fastq=$(readlink -f $fastq_file)
-	echo "#! /bin/bash
-		set -euo pipefail
-		module load $modules
-		cd $tmp_dir
-		$unzip_path $fastq |
-			$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/$rootname.trim.log |
-			$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 $star_options |
-			$dedup_path 2> $wd/$rootname.dedup.log |
-			tee $wd/$rootname.bam |
-			$samtools_path index /dev/stdin $wd/$rootname.bai
-		touch $wd/$rootname.bai
-		cp Log.final.out $wd/$rootname.align.log
-" | sbatch --cpus-per-task=$N_thread --job-name=$rootname\_align --output=$rootname.job.log --time=$time --mail-type=$mail_type
+	fastq_files+=($(readlink -f $fastq_file))
 done
+
+echo "#! /bin/bash
+	set -euo pipefail
+	fastqs=(${fastq_files[@]})
+	fastq=\${fastqs[\$SLURM_ARRAY_TASK_ID]}
+	rootname=\$(basename \$fastq .fastq.gz)
+	
+	module load $modules
+	cd $tmp_dir
+	$unzip_path \$fastq |
+		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/\$rootname.trim.log |
+		$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 $star_options |
+		$dedup_path 2> $wd/\$rootname.dedup.log |
+		tee $wd/\$rootname.bam |
+		$samtools_path index /dev/stdin $wd/\$rootname.bai
+	touch $wd/\$rootname.bai
+	cp Log.final.out $wd/\$rootname.align.log
+" | sbatch --array=0-$(($# - 1)) --cpus-per-task=$N_thread --job-name=$job_name --output=$job_name.log --time=$time --mail-type=$mail_type
 
