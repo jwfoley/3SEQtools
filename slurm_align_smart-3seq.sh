@@ -84,5 +84,5 @@ echo "#! /bin/bash
 		$samtools_path index /dev/stdin $wd/\$rootname.bai
 	touch $wd/\$rootname.bai
 	cp Log.final.out $wd/\$rootname.align.log
-" | sbatch --array=0-$(($# - 1)) --cpus-per-task=$N_thread --job-name=$job_name --output=$job_name.log --time=$time --mail-type=$mail_type
+" | sbatch --array=0-$((${#fastq_files[@]} - 1)) --cpus-per-task=$N_thread --job-name=$job_name --output=$job_name.log --time=$time --mail-type=$mail_type
 
