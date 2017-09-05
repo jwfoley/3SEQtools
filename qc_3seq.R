@@ -17,8 +17,8 @@ category.colors <- c(
 	"multiply aligned" =  "darkgreen",
 	"other" =             "yellow3",
 	"too short" =         "yellow2",
-	"no insert" =         "darkred",
-	"no header" =         "red2"
+	"RT dimer" =         "darkred",
+	"PCR dimer" =         "red2"
 )
 
 get.filename <- function(library.name, suffix.name) paste0(library.name, filename.suffix[[suffix.name]])
@@ -34,8 +34,8 @@ parse.trim.log <- function(library.name) {
 	close(trim.log)
 	c(
 		"total" =      total.reads,
-		"no header" =  sum(subset(length.counts, length < 0)$count),
-		"no insert" =  subset(length.counts, length == 0)$count
+		"PCR dimer" =  sum(subset(length.counts, length < 0)$count),
+		"RT dimer" =  subset(length.counts, length == 0)$count
 	)
 }
 
@@ -56,14 +56,14 @@ parse.align.log <- function(library.name) {
 get.read.categories <- function(libraries) t(sapply(libraries, function(library.name) {
 	trim.results <- parse.trim.log(library.name)
 	align.results <- parse.align.log(library.name)
-	stopifnot(align.results[1] == trim.results[1] - sum(trim.results[-1]))
+#	stopifnot(align.results[1] == trim.results[1] - sum(trim.results[-1]))
   c(trim.results, align.results[-1])
 }))
 
 plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	result.frame <- melt(read.category.counts[,-1], varnames = c("library", "category"), value.name = "reads", as.is = T)
 	result.frame$library <- factor(result.frame$library, levels = rownames(read.category.counts))
-	result.frame$category <- factor(result.frame$category, levels = c("no header", "no insert", "too short", "other", "multiply aligned", "uniquely aligned"))
+	result.frame$category <- factor(result.frame$category, levels = c("PCR dimer", "RT dimer", "too short", "other", "multiply aligned", "uniquely aligned"))
 	if (normalize) {
 		ggplot(result.frame) +
 			geom_col(aes(library, reads, fill = category), position = "fill") +
