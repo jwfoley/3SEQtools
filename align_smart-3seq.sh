@@ -72,7 +72,7 @@ do
 	cd $tmp_dir
 	$unzip_path $fastq |
 		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/$rootname.trim.log |
-		$star_path --genomeLoad LoadAndKeep --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 10 --limitBAMsortRAM $bam_mem $star_options |
+		$star_path --genomeLoad LoadAndKeep --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 --limitBAMsortRAM $bam_mem $star_options |
 		$dedup_path 2> $wd/$rootname.dedup.log |
 		tee $wd/$rootname.bam |
 		$samtools_path index /dev/stdin $wd/$rootname.bai
