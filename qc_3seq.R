@@ -144,6 +144,7 @@ if (length(libraries) > 0) {
 	read.category.percent.plot <- plot.read.categories(read.category.counts, normalize = T)
 	
 	dedup.counts <- get.dedup.counts(libraries)
+	rownames(dedup.counts) <- basename(rownames(dedup.counts))
 	dedup.count.plot <- plot.dedup(dedup.counts)
 
 	save.image("qc_3seq.RData")
