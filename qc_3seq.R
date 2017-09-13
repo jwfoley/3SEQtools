@@ -6,6 +6,10 @@ library(ggplot2)
 library(optparse)
 
 default.dims <- "10,7.5"
+graph.theme <- theme(
+	axis.text.x =       element_text(angle = 90, hjust = 1, vjust = 0.5),
+	axis.ticks.x =      element_blank()
+)
 
 # parse command-line arguments
 opt <- parse_args(OptionParser(option_list = list(
@@ -99,19 +103,14 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 		ggplot(result.frame) +
 			geom_col(aes(library, reads, fill = category), position = "fill", width = 1) +
 			scale_y_continuous(label = percent, expand = c(0, 0)) +
-			theme(
-				axis.text.x =       element_text(angle = 90, hjust = 1, vjust = 0.5),
-				panel.background =  element_blank()
-			) +
+			graph.theme +
+			theme(panel.background =  element_blank()) +
 			scale_fill_manual(values = category.colors)
 	} else {
 		ggplot(result.frame) +
 			geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma, expand = c(0, 0)) +
-			theme(
-				axis.text.x =         element_text(angle = 90, hjust = 1, vjust = 0.5),
-				panel.grid.major.x =  element_blank()
-			) +
+			graph.theme +
 			scale_fill_manual(values = category.colors)
 	}
 }
@@ -123,10 +122,7 @@ plot.dedup <- function(dedup.counts) {
 	ggplot(result.frame) +
 		geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma, expand = c(0, 0)) +
-			theme(
-				axis.text.x =         element_text(angle = 90, hjust = 1, vjust = 0.5),
-				panel.grid.major.x =  element_blank()
-			) +
+			graph.theme +
 			scale_fill_manual(values = category.colors)
 }
 
