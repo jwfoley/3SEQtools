@@ -9,7 +9,8 @@ library(ggplot2)
 
 filename.suffix <- list(
 	trim =   ".trim.log",
-	align =  ".align.log"
+	align =  ".align.log",
+	dedup =  ".dedup.log"
 )
 
 category.colors <- c(
@@ -17,11 +18,14 @@ category.colors <- c(
 	"multiply aligned" =  "darkgreen",
 	"other" =             "yellow3",
 	"too short" =         "yellow2",
-	"RT dimer" =         "darkred",
-	"PCR dimer" =         "red2"
+	"RT dimer" =          "darkred",
+	"PCR dimer" =         "red2",
+	"duplicate" =         "orange",
+	"non-duplicate" =     "blue"
 )
 
 get.filename <- function(library.name, suffix.name) paste0(library.name, filename.suffix[[suffix.name]])
+
 
 parse.trim.log <- function(library.name) {
 	trim.log <- file(get.filename(library.name, "trim"), "rt")
@@ -53,12 +57,28 @@ parse.align.log <- function(library.name) {
 	)
 }
 
+parse.dedup.log <- function(library.name) {
+	log.list <- scan(get.filename(library.name, "dedup"), list(character(), character()), sep = "\t", strip.white = T, fill = T, quiet = T)
+	log.vector <- as.integer(log.list[[1]])
+	names(log.vector) <- log.list[[2]]
+	result <- c(
+		"duplicate" =      as.integer(log.vector["optical duplicates"] + log.vector["PCR duplicates"]),
+		"non-duplicate" =  as.integer(log.vector["distinct alignments"] + log.vector["pre-PCR duplicates rescued by UMIs"] + log.vector["pre-PCR duplicates rescued by algorithm"]	)
+	)
+	stopifnot(sum(result) == log.vector["usable alignments read"])
+	result
+}
+
+
 get.read.categories <- function(libraries) t(sapply(libraries, function(library.name) {
 	trim.results <- parse.trim.log(library.name)
 	align.results <- parse.align.log(library.name)
 #	stopifnot(align.results[1] == trim.results[1] - sum(trim.results[-1]))
   c(trim.results, align.results[-1])
 }))
+
+get.dedup.counts <- function(libraries) t(sapply(libraries, parse.dedup.log))
+
 
 plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	result.frame <- melt(read.category.counts[,-1], varnames = c("library", "category"), value.name = "reads", as.is = T)
@@ -85,6 +105,19 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	}
 }
 
+plot.dedup <- function(dedup.counts) {
+	result.frame <- melt(dedup.counts, varnames = c("library", "category"), value.name = "reads", as.is = T)
+	result.frame$library <- factor(result.frame$library, levels = rownames(dedup.counts))
+	result.frame$category <- factor(result.frame$category, levels = c("duplicate", "non-duplicate"))
+	ggplot(result.frame) +
+		geom_col(aes(library, reads, fill = category)) +
+			scale_y_continuous(label = comma) +
+			theme(
+				axis.text.x =         element_text(angle = 90, hjust = 1),
+				panel.grid.major.x =  element_blank()
+			) +
+			scale_fill_manual(values = category.colors)
+}
 
 
 # run script on libraries provided as command-line arguments
@@ -98,9 +131,14 @@ if (length(libraries) > 0) {
 	rownames(read.category.counts) <- basename(rownames(read.category.counts))
 	read.category.count.plot <- plot.read.categories(read.category.counts)
 	read.category.percent.plot <- plot.read.categories(read.category.counts, normalize = T)
+	
+	dedup.counts <- get.dedup.counts(libraries)
+	dedup.count.plot <- plot.dedup(dedup.counts)
 
 	save.image("qc_3seq.RData")
 	write.table(read.category.counts, "read_category_count.tsv", quote = F, sep = "\t", col.names = NA)
 	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = 10, height = 7.5)
 	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = 10, height = 7.5)
+	ggsave("dedup.pdf", dedup.count.plot, "pdf", width = 10, height = 7.5)
 }
+
