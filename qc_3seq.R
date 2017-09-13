@@ -98,7 +98,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	if (normalize) {
 		ggplot(result.frame) +
 			geom_col(aes(library, reads, fill = category), position = "fill", width = 1) +
-			scale_y_continuous(label = percent) +
+			scale_y_continuous(label = percent, expand = c(0, 0)) +
 			theme(
 				axis.text.x =       element_text(angle = 90, hjust = 1),
 				panel.background =  element_blank()
@@ -107,7 +107,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	} else {
 		ggplot(result.frame) +
 			geom_col(aes(library, reads, fill = category), width = 1) +
-			scale_y_continuous(label = comma) +
+			scale_y_continuous(label = comma, expand = c(0, 0)) +
 			theme(
 				axis.text.x =         element_text(angle = 90, hjust = 1),
 				panel.grid.major.x =  element_blank()
@@ -122,7 +122,7 @@ plot.dedup <- function(dedup.counts) {
 	result.frame$category <- factor(result.frame$category, levels = c("duplicate", "non-duplicate"))
 	ggplot(result.frame) +
 		geom_col(aes(library, reads, fill = category), width = 1) +
-			scale_y_continuous(label = comma) +
+			scale_y_continuous(label = comma, expand = c(0, 0)) +
 			theme(
 				axis.text.x =         element_text(angle = 90, hjust = 1),
 				panel.grid.major.x =  element_blank()
