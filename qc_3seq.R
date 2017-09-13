@@ -7,8 +7,9 @@ library(optparse)
 
 default.dims <- "7.5,10"
 graph.theme <- theme(
-	axis.text.y =   element_text(hjust = 0),
-	axis.ticks.y =  element_blank()
+	axis.text.y =         element_text(hjust = 0),
+	axis.ticks.y =        element_blank(),
+	panel.grid.major.y =  element_blank()
 )
 
 # parse command-line arguments
