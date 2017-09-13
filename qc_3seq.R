@@ -10,7 +10,9 @@ library(ggplot2)
 filename.suffix <- list(
 	trim =   ".trim.log",
 	align =  ".align.log",
-	dedup =  ".dedup.log"
+	dedup =  ".dedup.log",
+	bam =    ".bam",
+	bai =    ".bai"
 )
 
 category.colors <- c(
