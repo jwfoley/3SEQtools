@@ -5,10 +5,10 @@ library(scales)
 library(ggplot2)
 library(optparse)
 
-default.dims <- "10,7.5"
+default.dims <- "7.5,10"
 graph.theme <- theme(
-	axis.text.x =       element_text(angle = 90, hjust = 1, vjust = 0.5),
-	axis.ticks.x =      element_blank()
+	axis.text.y =   element_text(hjust = 0),
+	axis.ticks.y =  element_blank()
 )
 
 # parse command-line arguments
@@ -97,33 +97,36 @@ get.dedup.counts <- function(libraries) t(sapply(libraries, parse.dedup.log))
 
 plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	result.frame <- melt(read.category.counts[,-1], varnames = c("library", "category"), value.name = "reads", as.is = T)
-	result.frame$library <- factor(result.frame$library, levels = rownames(read.category.counts))
+	result.frame$library <- factor(result.frame$library, levels = rev(rownames(read.category.counts))) # reversed for flipped coordinates
 	result.frame$category <- factor(result.frame$category, levels = c("PCR dimer", "RT dimer", "too short", "other", "multiply aligned", "uniquely aligned"))
 	if (normalize) {
 		ggplot(result.frame) +
 			geom_col(aes(library, reads, fill = category), position = "fill", width = 1) +
 			scale_y_continuous(label = percent, expand = c(0, 0)) +
+			coord_flip() +
+			scale_fill_manual(values = category.colors) +
 			graph.theme +
-			theme(panel.background =  element_blank()) +
-			scale_fill_manual(values = category.colors)
+			theme(panel.background = element_blank())
 	} else {
 		ggplot(result.frame) +
 			geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma, expand = c(0, 0)) +
-			graph.theme +
-			scale_fill_manual(values = category.colors)
+			coord_flip() +
+			scale_fill_manual(values = category.colors) +
+			graph.theme
 	}
 }
 
 plot.dedup <- function(dedup.counts) {
 	result.frame <- melt(dedup.counts, varnames = c("library", "category"), value.name = "reads", as.is = T)
-	result.frame$library <- factor(result.frame$library, levels = rownames(dedup.counts))
+	result.frame$library <- factor(result.frame$library, levels = rev(rownames(dedup.counts))) # reversed for flipped coordinates
 	result.frame$category <- factor(result.frame$category, levels = c("duplicate", "non-duplicate"))
 	ggplot(result.frame) +
 		geom_col(aes(library, reads, fill = category), width = 1) +
-			scale_y_continuous(label = comma, expand = c(0, 0)) +
-			graph.theme +
-			scale_fill_manual(values = category.colors)
+		scale_y_continuous(label = comma, expand = c(0, 0)) +
+		scale_fill_manual(values = category.colors) +
+		coord_flip() +	
+		graph.theme
 }
 
 
@@ -146,6 +149,6 @@ if (length(libraries) > 0) {
 	write.table(read.category.counts, "read_category_count.tsv", quote = F, sep = "\t", col.names = NA)
 	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
-	ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$width)
+	ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 }
 
