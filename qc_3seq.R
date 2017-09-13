@@ -76,7 +76,7 @@ parse.align.log <- function(library.name) {
 parse.dedup.log <- function(library.name) {
 	log.list <- scan(get.filename(library.name, "dedup"), list(character(), character()), sep = "\t", strip.white = T, fill = T, quiet = T)
 	log.vector <- as.integer(log.list[[1]])
-	names(log.vector) <- sub(" \\|$", "", log.list[[2]])
+	names(log.vector) <- log.list[[2]]
 	result <- c(
 		"duplicate" =      as.integer(log.vector["optical duplicates"] + log.vector["PCR duplicates"]),
 		"non-duplicate" =  as.integer(log.vector["distinct alignments"] + log.vector["pre-PCR duplicates rescued by UMIs"] + log.vector["pre-PCR duplicates rescued by algorithm"]	)
