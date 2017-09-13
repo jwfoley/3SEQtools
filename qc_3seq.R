@@ -3,7 +3,16 @@
 library(reshape2)
 library(scales)
 library(ggplot2)
+library(optparse)
 
+default.dims <- "10,7.5"
+
+# parse command-line arguments
+opt <- parse_args(OptionParser(option_list = list(
+	make_option(c("-d", "--dim"), action = "store", default = default.dims, help = paste0("dimensions of output graphs in form W,H (default ", default.dims, ")"))
+)), positional_arguments = c(1, Inf))
+graph.dims <- as.list(as.numeric(strsplit(opt$options$dim, ",")[[1]]))
+names(graph.dims) <- c("width", "height")
 
 # define functions
 
@@ -123,7 +132,7 @@ plot.dedup <- function(dedup.counts) {
 
 
 # run script on libraries provided as command-line arguments
-libraries <- commandArgs(trailingOnly = T)
+libraries <- opt$arg
 if (length(libraries) > 0) {
 	for (suffix in filename.suffix) libraries <- sub(suffix, "", libraries)
 	cat("found libraries:\n")
@@ -139,8 +148,8 @@ if (length(libraries) > 0) {
 
 	save.image("qc_3seq.RData")
 	write.table(read.category.counts, "read_category_count.tsv", quote = F, sep = "\t", col.names = NA)
-	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = 10, height = 7.5)
-	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = 10, height = 7.5)
-	ggsave("dedup.pdf", dedup.count.plot, "pdf", width = 10, height = 7.5)
+	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
+	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
+	ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$width)
 }
 
