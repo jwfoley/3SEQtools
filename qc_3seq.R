@@ -100,7 +100,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 			geom_col(aes(library, reads, fill = category), position = "fill", width = 1) +
 			scale_y_continuous(label = percent, expand = c(0, 0)) +
 			theme(
-				axis.text.x =       element_text(angle = 90, hjust = 1),
+				axis.text.x =       element_text(angle = 90, hjust = 1, vjust = 0.5),
 				panel.background =  element_blank()
 			) +
 			scale_fill_manual(values = category.colors)
@@ -109,7 +109,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 			geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma, expand = c(0, 0)) +
 			theme(
-				axis.text.x =         element_text(angle = 90, hjust = 1),
+				axis.text.x =         element_text(angle = 90, hjust = 1, vjust = 0.5),
 				panel.grid.major.x =  element_blank()
 			) +
 			scale_fill_manual(values = category.colors)
@@ -124,7 +124,7 @@ plot.dedup <- function(dedup.counts) {
 		geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma, expand = c(0, 0)) +
 			theme(
-				axis.text.x =         element_text(angle = 90, hjust = 1),
+				axis.text.x =         element_text(angle = 90, hjust = 1, vjust = 0.5),
 				panel.grid.major.x =  element_blank()
 			) +
 			scale_fill_manual(values = category.colors)
