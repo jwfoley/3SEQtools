@@ -97,7 +97,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 	result.frame$category <- factor(result.frame$category, levels = c("PCR dimer", "RT dimer", "too short", "other", "multiply aligned", "uniquely aligned"))
 	if (normalize) {
 		ggplot(result.frame) +
-			geom_col(aes(library, reads, fill = category), position = "fill") +
+			geom_col(aes(library, reads, fill = category), position = "fill", width = 1) +
 			scale_y_continuous(label = percent) +
 			theme(
 				axis.text.x =       element_text(angle = 90, hjust = 1),
@@ -106,7 +106,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 			scale_fill_manual(values = category.colors)
 	} else {
 		ggplot(result.frame) +
-			geom_col(aes(library, reads, fill = category)) +
+			geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma) +
 			theme(
 				axis.text.x =         element_text(angle = 90, hjust = 1),
@@ -121,7 +121,7 @@ plot.dedup <- function(dedup.counts) {
 	result.frame$library <- factor(result.frame$library, levels = rownames(dedup.counts))
 	result.frame$category <- factor(result.frame$category, levels = c("duplicate", "non-duplicate"))
 	ggplot(result.frame) +
-		geom_col(aes(library, reads, fill = category)) +
+		geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma) +
 			theme(
 				axis.text.x =         element_text(angle = 90, hjust = 1),
