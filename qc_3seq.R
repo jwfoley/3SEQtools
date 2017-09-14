@@ -127,7 +127,8 @@ plot.dedup <- function(dedup.counts) {
 		scale_y_continuous(label = comma, expand = c(0, 0)) +
 		scale_fill_manual(values = category.colors) +
 		coord_flip() +	
-		graph.theme
+		graph.theme +
+		xlab("uniquely aligned reads")
 }
 
 
