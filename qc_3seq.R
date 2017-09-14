@@ -119,7 +119,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 }
 
 plot.dedup <- function(dedup.counts) {
-	result.frame <- melt(dedup.counts, varnames = c("library", "category"), value.name = "uniquely aligned reads", as.is = T)
+	result.frame <- melt(dedup.counts, varnames = c("library", "category"), value.name = "reads", as.is = T)
 	result.frame$library <- factor(result.frame$library, levels = rev(rownames(dedup.counts))) # reversed for flipped coordinates
 	result.frame$category <- factor(result.frame$category, levels = c("duplicate", "non-duplicate"))
 	ggplot(result.frame) +
