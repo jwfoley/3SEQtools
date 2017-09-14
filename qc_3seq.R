@@ -128,7 +128,7 @@ plot.dedup <- function(dedup.counts) {
 		scale_fill_manual(values = category.colors) +
 		coord_flip() +	
 		graph.theme +
-		xlab("uniquely aligned reads")
+		ylab("uniquely aligned reads") # y because flipped coordinates
 }
 
 
