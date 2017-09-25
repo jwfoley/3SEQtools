@@ -48,7 +48,7 @@ parser = argparse.ArgumentParser(description = 'for Smart-3SEQ reads in FASTQ fo
 parser.add_argument('-u', '--umi', action = 'store', type = int, default = 5, help = 'length of UMI')
 parser.add_argument('-g', '--g_overhang', action = 'store', type = int, default = 3, help = 'length of G-overhang')
 parser.add_argument('-b', '--homopolymer_base', action = 'store', type = str, default = 'A', help = 'base to look for in 3\' homopolymer')
-parser.add_argument('-p', '--homopolymer_length', action = 'store', type = int, default = 10, help = 'minimum homopolymer length for detecting a stretch to trim; set to 0 to disable homopolymer trimming')
+parser.add_argument('-p', '--homopolymer_length', action = 'store', type = int, default = 8, help = 'minimum homopolymer length for detecting a stretch to trim; set to 0 to disable homopolymer trimming')
 parser.add_argument('-m', '--mismatches', action = 'store', type = int, default = 1, help = 'number of allowed mismatches in stretch of A\'s')
 parser.add_argument('-n', '--no_trim', action = 'store_true', help = 'report trimmed lengths but leave homopolymer tails intact (better for aligners with soft-clipping)')
 parser.add_argument('-l', '--min_length', action = 'store', type = int, default = 1, help = 'minimum length of sequences to keep (after trimming)')
