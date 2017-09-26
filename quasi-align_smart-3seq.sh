@@ -10,12 +10,11 @@ salmon_path=salmon
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
 unzip_path='pigz -dc'
 tmp_dir='/tmp/align_smart-3seq_tmp'
-N_thread=$(nproc)
 N_N=5
 N_G=3
 N_A=8
 N_mismatch=1
-salmon_options="-p $N_thread -l SF --noLengthCorrection"
+salmon_options='-l SF --noLengthCorrection'
 
 
 truncate_arg=''
