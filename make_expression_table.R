@@ -43,7 +43,7 @@ rownames(gene.name.table) <- gene.name.table$ensembl_gene_id
 gene.name = gene.name.table[ensembl.gene.id, "external_gene_name"]
 
 dds <- DESeq(DESeqDataSetFromMatrix(gene.counts, colData = data.frame(1:ncol(gene.counts)), ~ 1), fitType = "local", parallel = T, BPPARAM = MulticoreParam(workers = detectCores())) # eats a lot of memory!
-gene.rlogs <- rlog(dds) # takes a long time! but slightly faster than rlog directly on the counts
+gene.rlogs <- rlog(dds, blind = F) # takes a long time! but slightly faster than rlog directly on the counts
 colnames(gene.counts) <- library.names
 colnames(gene.rlogs) <- library.names
 rownames(gene.rlogs) <- rownames(gene.counts)
