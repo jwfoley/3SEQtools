@@ -26,6 +26,7 @@ feature.counts <- featureCounts(
 	annot.ext =            annotation.file,
 	isGTFAnnotationFile =  T,
 	strandSpecific =       1,
+	read2pos =             5,
 	nthreads =             detectCores()
 )
 
