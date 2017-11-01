@@ -3,6 +3,9 @@
 # given a group of BAM files from 3SEQ, make an Excel-compatible file containing read counts, transcripts per million (TPM), and DESeq2-normalized (blind rlog) gene expression values
 # assumes an Ensembl/GENCODE GTF annotation file
 
+TMP.DIR = "/tmp" # location for featureCounts temporary files
+
+
 command.args <- commandArgs(trailingOnly = T)
 if (length(command.args) < 3) stop("usage: make_expression_table.R annotation.gtf library1.bam library2.bam ...")
 
@@ -27,7 +30,8 @@ feature.counts <- featureCounts(
 	isGTFAnnotationFile =  T,
 	strandSpecific =       1,
 	read2pos =             5,
-	nthreads =             detectCores()
+	nthreads =             detectCores(),
+	tmpDir =               TMP.DIR
 )
 
 gene.counts <- feature.counts$counts
