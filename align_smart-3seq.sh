@@ -9,7 +9,7 @@
 samtools_path=samtools
 star_path=STAR
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
-dedup_path='~/umi-dedup/dedup.py -qs'
+dedup_path="$HOME/umi-dedup/dedup.py -qs"
 unzip_path='pigz -dc'
 tmp_dir='/tmp/align_smart-3seq_tmp'
 N_thread=$(nproc)
