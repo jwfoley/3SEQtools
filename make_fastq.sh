@@ -35,7 +35,7 @@ run_folder=$(readlink -f $1)
 
 set -euo pipefail
 
-if [ "$discard_undetermined" = true ]; then ln -s /dev/null $undetermined_filename; fi
+#if [ "$discard_undetermined" = true ]; then ln -s /dev/null $undetermined_filename; fi # breaks bcl2fastq's file-size check
 $bcl2fastq_cmd -o . --stats-dir $run_folder/Data/Intensities/BaseCalls/Stats/ --reports-dir $run_folder/Data/Intensities/BaseCalls/Reports/ $sample_sheet_arg -R $run_folder
 
 # clean up filenames
