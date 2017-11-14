@@ -88,8 +88,8 @@ for name, seq, qualities in readfq(args.infile):
 	if polya_pos >= header_length + args.min_length: # don't write if too short
 		if args.umi > 0:
 			name += ':' + str(seq[0:args.umi])
-		seq = seq[:polya_pos]
-		qualities = qualities[:polya_pos]
+		seq = seq[header_length:polya_pos]
+		qualities = qualities[header_length:polya_pos]
 		args.outfile.write(writefq(name, seq, qualities))
 	
 	read_counter += 1
