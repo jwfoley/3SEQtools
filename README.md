@@ -10,7 +10,7 @@ Pipelines for processing and QC of data from Smart-3SEQ or classic 3SEQ. Most sc
 Wrapper to call `bcl2fastq` with preferred settings and simpler usage. Mostly used with NextSeq data so some features might not make sense on other platforms (e.g. `--no-lane-splitting` could be bad on HiSeq).
 
 
-## FASTQ alteration pipelines
+## FASTQ alteration pipeline
 
 ### `umi_homopolymer.py`
 
