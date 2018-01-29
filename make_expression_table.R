@@ -15,14 +15,12 @@ if (! do.rlog) command.args <- command.args[command.args != NO.RLOG.FLAG]
 library(parallel)
 library(WriteXLS)
 library(Rsubread)
-library(biomaRt)
+library(rtracklayer)
 
 if (do.rlog) {
 	library(BiocParallel)
 	library(DESeq2)
 }
-
-ensembl = useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl", host = "uswest.ensembl.org")
 
 
 annotation.file <- command.args[1]
@@ -42,15 +40,13 @@ feature.counts <- featureCounts(
 
 gene.counts <- feature.counts$counts
 
-ensembl.gene.id <- sub("\\..*", "", rownames(gene.counts))
-gene.name.table <- getBM(
-	attributes =  c("ensembl_gene_id", "external_gene_name"),
-	filters =     "ensembl_gene_id",
-	values =      ensembl.gene.id,
-	mart =        ensembl
-)
-rownames(gene.name.table) <- gene.name.table$ensembl_gene_id
-gene.name = gene.name.table[ensembl.gene.id, "external_gene_name"]
+# read gene IDs + gene symbols from GTF file
+annotations <- readGFF(annotation.file, filter = list(type = "gene"), tags = c("gene_id", "gene_name"))
+gene.name.lookup <- annotations$gene_name
+names(gene.name.lookup) <- annotations$gene_id
+gene.id <- rownames(gene.counts)
+gene.name <- gene.name.lookup[gene.id]
+
 
 if (do.rlog) {
 	colnames(gene.counts) <- NULL # rlogTransformation doesn't work if there are column names
@@ -68,12 +64,12 @@ gene.tpm <- 1E6 * sweep(gene.counts, 2, colSums(gene.counts), "/")
 save.image("make_expression_table.RData")
 
 sheets <- list(
-	data.frame("Ensembl ID" = ensembl.gene.id, "gene name" = gene.name, gene.counts, check.names = F),
-	data.frame("Ensembl ID" = ensembl.gene.id, "gene name" = gene.name, round(gene.tpm, 1), check.names = F)
+	data.frame("gene ID" = gene.id, "gene name" = gene.name, gene.counts, check.names = F),
+	data.frame("gene ID" = gene.id, "gene name" = gene.name, round(gene.tpm, 1), check.names = F)
 )
 sheet.names <- c("count", "TPM")
 if (do.rlog) {
-	sheets[[3]] <- data.frame("Ensembl ID" = ensembl.gene.id, "gene name" = gene.name, round(gene.rlogs, 3), check.names = F)
+	sheets[[3]] <- data.frame("gene ID" = gene.id, "gene name" = gene.name, round(gene.rlogs, 3), check.names = F)
 	sheet.names[3] <- "rlog"
 }
 
