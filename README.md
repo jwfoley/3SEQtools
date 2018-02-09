@@ -53,6 +53,10 @@ Makes graphs of trimmed insert lengths from the log files of `umi_homopolymer.py
 
 Collects the log files from STAR alignments into a simple spreadsheet.
 
+### `trim_fastqc.sh`
+
+Wrapper to run FastQC after trimming the data with `umi_homopolymer.py`.
+
 
 ## Miscellaneous
 
