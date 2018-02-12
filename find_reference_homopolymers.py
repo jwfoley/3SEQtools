@@ -18,6 +18,8 @@ CHR_HEADER = re.compile('> *(.+)')
 parser = argparse.ArgumentParser(description = 'given reference sequence in FASTA format, produce a list in BED format of homopolymers of a given base', formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-l', '--length', action = 'store', type = int, default = 10, help = 'minimum length of homopolymer')
 parser.add_argument('-b', '--base', action = 'store', type = str, default = 'A', choices = sorted(COMPLEMENTS.keys()), help = 'target base')
+parser.add_argument('-u', '--upstream', action = 'store', type = int, default = 0, help = 'extend BED features this many bases upstream (left for + strand, right for - strand)')
+parser.add_argument('-d', '--downstream', action = 'store', type = int, default = 0, help = 'extend BED features this many bases downstream (right for + strand, left for - strand)')
 parser.add_argument('in_fastq', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
 parser.add_argument('out_bed', action = 'store', nargs = '?', type = argparse.FileType('w'), default = sys.stdout)
 args = parser.parse_args()
@@ -43,7 +45,18 @@ def read_base (fastq): # simple generator that spits out (chr, pos, base) one at
 				yield (chrom, current_pos, base.upper())
 
 def output_region (chrom, strand, start, end): # write a region in BED format
-	args.out_bed.write('%s\t%i\t%i\t.\t.\t%s\n' % (chrom, start - 1, end, '+-'[strand]))
+	if strand == 0:
+		left_extend, right_extend = args.upstream, args.downstream
+	elif strand == 1:
+		left_extend, right_extend = args.downstream, args.upstream
+	else:
+		raise NotImplementedError
+	args.out_bed.write('%s\t%i\t%i\t.\t.\t%s\n' % (
+		chrom,
+		max(1, start - left_extend) - 1,
+		end + right_extend,
+		'+-'[strand]
+	))
 
 def process_region (chrom, strand, start, length, last_base_match): # find the length of a region and output if it qualifies; assume the region starts on a target base
 	length = length - 1 + last_base_match # shorten if the last base is a mismatch (which implies the previous base is not)
