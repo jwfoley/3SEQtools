@@ -22,7 +22,7 @@ star_options='--outFilterMultimapNmax 1 --outFilterMismatchNmax 999 --clip3pAdap
 
 
 truncate_arg=''
-while getopts ":n:g:t:" opt
+while getopts ":n:g:t:d" opt
 do
 	case $opt in
 		n)
@@ -36,6 +36,9 @@ do
 		t)
 			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid length to truncate" >&2; exit 1; fi
 			truncate_arg="-L $OPTARG"
+			;;
+		d)
+			dedup_path=cat
 			;;
 	esac
 done
