@@ -74,7 +74,9 @@ parse.align.log <- function(library.name) {
 }
 
 parse.dedup.log <- function(library.name) {
-	log.list <- scan(get.filename(library.name, "dedup"), list(character(), character()), sep = "\t", strip.white = T, fill = T, quiet = T)
+	log.file <- get.filename(library.name, "dedup")
+	if (! file.exists(log.file)) return(NULL)
+	log.list <- scan(log.file, list(character(), character()), sep = "\t", strip.white = T, fill = T, quiet = T)
 	log.vector <- as.integer(log.list[[1]])
 	names(log.vector) <- log.list[[2]]
 	result <- c(
@@ -145,13 +147,16 @@ if (length(libraries) > 0) {
 	read.category.percent.plot <- plot.read.categories(read.category.counts, normalize = T)
 	
 	dedup.counts <- get.dedup.counts(libraries)
-	rownames(dedup.counts) <- basename(rownames(dedup.counts))
-	dedup.count.plot <- plot.dedup(dedup.counts)
+	have.dedup.counts <- any(! sapply(dedup.counts, is.null))
+	if (have.dedup.counts) {
+		rownames(dedup.counts) <- basename(rownames(dedup.counts))
+		dedup.count.plot <- plot.dedup(dedup.counts)
+	}
 
 	save.image("qc_3seq.RData")
 	write.table(read.category.counts, "read_category_count.tsv", quote = F, sep = "\t", col.names = NA)
 	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
-	ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
+	if (have.dedup.counts) ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 }
 
