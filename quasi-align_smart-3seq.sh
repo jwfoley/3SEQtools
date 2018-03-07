@@ -9,7 +9,6 @@ samtools_path=samtools
 salmon_path=salmon
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
 unzip_path='pigz -dc'
-tmp_dir='/tmp/align_smart-3seq_tmp'
 N_N=5
 N_G=3
 N_A=8
@@ -55,7 +54,6 @@ shift 1
 
 set -euo pipefail
 
-mkdir -p $tmp_dir
 
 for fastq_file in "$@"
 do
@@ -65,6 +63,7 @@ do
 	
 	echo -e "processing $rootname...\n\n" >&2
 	
+	tmp_dir=$(mktemp -d --suffix .quasi-align_smart-3seq)
 	cd $tmp_dir
 	$unzip_path $fastq |
 		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/$rootname.trim.log |
@@ -72,8 +71,9 @@ do
 	cp quant.sf $wd/$rootname.quant.tsv
 	cp logs/salmon_quant.log $wd/$rootname.quasi-align.log
 	
+	cd $wd
+	rm -rf $tmp_dir
+	
 	echo -e "$rootname done\n" >&2
 done
-
-rm -rf $tmp_dir
 

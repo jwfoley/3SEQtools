@@ -4,7 +4,6 @@
 # assumes an Ensembl/GENCODE GTF annotation file
 
 NO.RLOG.FLAG <- "--no-rlog" # use this flag to disable calculating rlog since it can take a long time
-TMP.DIR <- "/tmp" # location for featureCounts temporary files
 
 
 command.args <- commandArgs(trailingOnly = T)
@@ -35,7 +34,7 @@ feature.counts <- featureCounts(
 	strandSpecific =       1,
 	read2pos =             5,
 	nthreads =             detectCores(),
-	tmpDir =               TMP.DIR
+	tmpDir =               "/tmp"
 )
 
 gene.counts <- feature.counts$counts

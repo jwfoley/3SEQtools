@@ -12,7 +12,6 @@ star_path=STAR
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
 dedup_command="$HOME/umi-dedup/dedup.py -qs 2> \$wd/\$rootname.dedup.log"
 unzip_path='pigz -dc'
-tmp_dir='~/tmp'
 N_thread=8
 N_N=5
 N_G=3
@@ -76,9 +75,8 @@ echo "#! /bin/bash
 	fastq=\${fastqs[\$SLURM_ARRAY_TASK_ID]}
 	rootname=\$(basename \$fastq .fastq.gz)
 	
-	this_tmp_dir=$tmp_dir/\$SLURM_ARRAY_JOB_ID\_\$SLURM_ARRAY_TASK_ID
-	mkdir \$this_tmp_dir
-	cd \$this_tmp_dir
+	tmp_dir=\$(mktemp -d --suffix .align_smart-3seq)
+	cd \$tmp_dir
 	$unzip_path \$fastq |
 		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/\$rootname.trim.log |
 		$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 $star_options |
@@ -89,6 +87,6 @@ echo "#! /bin/bash
 	cp Log.final.out $wd/\$rootname.align.log
 	
 	cd ..
-	rm -rf \$this_tmp_dir
+	rm -rf \$tmp_dir
 " | sbatch --array=0-$((${#fastq_files[@]} - 1)) --cpus-per-task=$N_thread --job-name=$job_name --output=$job_name.log --time=$time --mail-type=$mail_type
 

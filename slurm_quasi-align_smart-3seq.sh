@@ -11,7 +11,6 @@ samtools_path=samtools
 salmon_path=salmon
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
 unzip_path='pigz -dc'
-tmp_dir='$L_SCRATCH'
 N_thread=1
 N_N=5
 N_G=3
@@ -76,14 +75,14 @@ echo "#! /bin/bash
 	fastqs=(${fastq_files[@]})
 	fastq=\${fastqs[\$SLURM_ARRAY_TASK_ID]}
 	rootname=\$(basename \$fastq .fastq.gz)
-	this_tmp_dir=$tmp_dir/\$SLURM_ARRAY_JOB_ID\_\$SLURM_ARRAY_TASK_ID
+	tmp_dir=\$(mktemp -d --suffix .quasi-align_smart-3seq)
 	
 	$unzip_path \$fastq |
 		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/\$rootname.trim.log |
-		$salmon_path quant $salmon_options -i $genome_dir -p $N_thread -r /dev/stdin -o \$this_tmp_dir
-	cp \$this_tmp_dir/quant.sf $wd/\$rootname.quant.tsv
-	cp \$this_tmp_dir/logs/salmon_quant.log $wd/\$rootname.quasi-align.log
+		$salmon_path quant $salmon_options -i $genome_dir -p $N_thread -r /dev/stdin -o \$tmp_dir
+	cp \$tmp_dir/quant.sf $wd/\$rootname.quant.tsv
+	cp \$tmp_dir/logs/salmon_quant.log $wd/\$rootname.quasi-align.log
 	
-	rm -rf \$this_tmp_dir
+	rm -rf \$tmp_dir
 " | sbatch --array=0-$((${#fastq_files[@]} - 1)) --cpus-per-task=$N_thread --job-name=$job_name --output=$job_name.log --time=$time #--mail-type=$mail_type
 

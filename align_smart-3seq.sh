@@ -11,7 +11,6 @@ star_path=STAR
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
 dedup_command="$HOME/umi-dedup/dedup.py -qs 2> \$wd/\$rootname.dedup.log"
 unzip_path='pigz -dc'
-tmp_dir='/tmp/align_smart-3seq_tmp'
 N_thread=$(nproc)
 bam_mem=2147483648 # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
 N_N=5
@@ -58,8 +57,8 @@ shift 1
 
 set -euo pipefail
 
-mkdir -p $tmp_dir
-cd $tmp_dir
+genome_tmp_dir=$(mktemp -d --suffix .align_smart-3seq.genome)
+cd $genome_tmp_dir
 echo -n 'loading genome into shared memory... ' >&2
 $star_path --genomeLoad LoadAndExit --genomeDir $genome_dir > /dev/null
 echo 'done' >&2
@@ -72,6 +71,7 @@ do
 	
 	echo -n "processing $rootname... " >&2
 	
+	tmp_dir=$(mktemp -d --suffix .align_smart-3seq)
 	cd $tmp_dir
 	$unzip_path $fastq |
 		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/$rootname.trim.log |
@@ -81,11 +81,14 @@ do
 		$samtools_path index /dev/stdin $wd/$rootname.bai
 	touch $wd/$rootname.bai
 	cp Log.final.out $wd/$rootname.align.log
+	cd $wd
+	rm -rf $tmp_dir
 	
 	echo 'done' >&2
 done
 
+cd $genome_tmp_dir
 $star_path --genomeLoad Remove --genomeDir $genome_dir > /dev/null
 cd $wd
-rm -rf $tmp_dir
+rm -rf $genome_tmp_dir
 
