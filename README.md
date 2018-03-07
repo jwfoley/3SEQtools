@@ -25,10 +25,10 @@ Starts from a list of single-end Illumina FASTQ files and aligns them into sorte
 
 #### Options
 
-	* `-n [length]`: extract leading UMI of specified length (default 5)
-	* `-g [length]`: discard specified number of bases after UMI (default 3)
-	* `-t [length]`: truncate reads to specified length
-	* `-d`: skip duplicate marking
+* `-n [length]`: extract leading UMI of specified length (default 5)
+* `-g [length]`: discard specified number of bases after UMI (default 3)
+* `-t [length]`: truncate reads to specified length
+* `-d`: skip duplicate marking
 
 ### `slurm_align_smart-3seq.sh`
 
