@@ -10,7 +10,7 @@ job_name=slurm_align_smart-3seq
 samtools_path=samtools
 star_path=STAR
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
-dedup_command="$HOME/umi-dedup/dedup.py -qs 2> \$wd/\$rootname.dedup.log"
+dedup_path='~/umi-dedup/dedup.py -qs'
 unzip_path='pigz -dc'
 tmp_dir='~/tmp'
 N_thread=8
@@ -41,7 +41,7 @@ do
 			truncate_arg="-L $OPTARG"
 			;;
 		d)
-			dedup_command=cat
+			dedup_path=cat
 			;;
 	esac
 done
@@ -82,7 +82,7 @@ echo "#! /bin/bash
 	$unzip_path \$fastq |
 		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/\$rootname.trim.log |
 		$star_path --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression 0 $star_options |
-		$dedup_command |
+		$dedup_path 2> $wd/\$rootname.dedup.log |
 		tee $wd/\$rootname.bam |
 		$samtools_path index /dev/stdin $wd/\$rootname.bai
 	touch $wd/\$rootname.bai
