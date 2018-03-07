@@ -23,7 +23,8 @@ Removes the poly(A) tail, moves the UMI to the read metadata, and discards the G
 
 Starts from a list of single-end Illumina FASTQ files and aligns them into sorted, indexed, duplicate-marked BAM files. `samtools` and `STAR` are expected to be in your `PATH` and [UMI-dedup](https://github.com/jwfoley/umi-dedup) locally installed. You must provide the path to a prepared STAR genome directory. `pypy` and `pigz` are preferred for performance but not required.
 
-Options
+#### Options
+
 	* `-n [length]`: extract leading UMI of specified length (default 5)
 	* `-g [length]`: discard specified number of bases after UMI (default 3)
 	* `-t [length]`: truncate reads to specified length
