@@ -2,6 +2,8 @@
 
 import re, collections, sys, argparse, pysam
 
+DEFAULT_END_DISTANCE = 500 # maximum distance from gene end that a read can start to be counted as 3' end
+
 
 GenomeFeature = collections.namedtuple('GenomeFeature', ['reference_id', 'feature_type', 'left', 'right', 'is_reverse', 'gene_id', 'gene_type', 'segments']) # this might be easier with a Python 3.7 data class
 
@@ -88,6 +90,7 @@ class GtfParser:
 
 parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-d', '--ignoredup', action = 'store_true', help = 'ignore reads marked as duplicate')
+parser.add_argument('-e', '--end_distance', action = 'store', type = int, default = DEFAULT_END_DISTANCE, help = 'maximum distance from gene end to be considered 3\' ends, default %i' % DEFAULT_END_DISTANCE)
 parser.add_argument('--debug', action = 'store_true')
 parser.add_argument('gtf_file', action = 'store', type = argparse.FileType('r'))
 parser.add_argument('bam_file', action = 'store', nargs = '?', type = str, default = '-')
@@ -99,7 +102,7 @@ gtf = GtfParser(args.gtf_file, sam.references)
 
 
 genes = collections.deque()
-counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'wrong strand', 'in exon'])
+counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'wrong strand', 'in exon', '3\' end'])
 gene_hit_counter = collections.Counter()
 
 
@@ -113,7 +116,7 @@ for raw_alignment in sam:
 		(args.ignoredup and raw_alignment.is_duplicate)
 	): continue
 
-	hit_gene = hit_sense = hit_exon = 0
+	n_hit_gene = n_hit_sense = n_hit_exon = n_hit_end = 0
 	
 	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_id = None, gene_type = None, segments = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
 	
@@ -147,21 +150,28 @@ for raw_alignment in sam:
 			
 		# identify overlap
 		if raw_alignment.get_overlap(gene.left + 1, gene.right + 1) > 0:
-			hit_gene += 1
-			hit_sense += alignment.is_reverse == gene.is_reverse			
-			if args.debug: print('\thit:\t%s\t%s\t%i\t%i' % (gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
+			n_hit_gene += 1
+			hit_sense = alignment.is_reverse == gene.is_reverse	
+			n_hit_sense += hit_sense
+			n_hit_end += hit_sense and (
+				(not gene.is_reverse and alignment.left >= gene.right - args.end_distance + 2) or
+				(gene.is_reverse and alignment.right <= gene.left + args.end_distance)
+			)
+			
+			if args.debug: print('\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
 			for exon in gene.segments:
 				if raw_alignment.get_overlap(exon[0] + 1, exon[1] + 1) > 0:
-					hit_exon += 1
+					n_hit_exon += 1
 					if args.debug: print('\t\texon:\t\t%i\t%i' % exon, file = sys.stderr)
 				elif alignment.right < exon[0]: # completely to the left of this exon, so stop looking
 					break
 	
 	counts['total alignments'] +=   1
-	counts['no annotated gene'] +=  hit_gene == 0
-	counts['wrong strand'] +=       hit_gene > 0 and hit_sense == 0 # only if there were no hits on right strand
-	counts['in exon'] +=            hit_exon > 0
+	counts['no annotated gene'] +=  n_hit_gene == 0
+	counts['wrong strand'] +=       n_hit_gene > 0 and n_hit_sense == 0 # only if there were no hits on correct strand
+	counts['in exon'] +=            n_hit_exon > 0
+	counts['3\' end'] +=						n_hit_end > 0
 
 
 for category, count in counts.items(): print('%s\t%i' % (category, count))
