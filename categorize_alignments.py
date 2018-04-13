@@ -87,6 +87,7 @@ class GtfParser:
 
 
 parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('-d', '--ignoredup', action = 'store_true', help = 'ignore reads marked as duplicate')
 parser.add_argument('--debug', action = 'store_true')
 parser.add_argument('gtf_file', action = 'store', type = argparse.FileType('r'))
 parser.add_argument('bam_file', action = 'store', nargs = '?', type = str, default = '-')
@@ -104,6 +105,14 @@ gene_hit_counter = collections.Counter()
 
 previous_alignment = None # saved only to verify sorting
 for raw_alignment in sam:
+	if (
+		raw_alignment.is_qcfail or
+		raw_alignment.is_secondary or
+		raw_alignment.is_supplementary or
+		raw_alignment.is_unmapped or
+		(args.ignoredup and raw_alignment.is_duplicate)
+	): continue
+
 	hit_gene = hit_sense = hit_exon = hit_intron = False
 	
 	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_id = None, gene_type = None, segments = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
