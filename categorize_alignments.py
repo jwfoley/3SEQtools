@@ -28,7 +28,7 @@ def feature_completely_before (feature1, feature2):
 
 class GtfParser:
 	'''
-	generator that yields GenomeFeature instances containing genes' feature data plus lists of exons
+	generator that yields GenomeFeature instances containing genes' feature data plus lists of introns (not exons as you might expect)
 	'''
 
 	def __init__ (self, gtf_file, ref_order):
@@ -80,9 +80,10 @@ class GtfParser:
 				for attribute in ['reference_id', 'is_reverse', 'gene_id', 'gene_type']: assert getattr(gene, attribute) == getattr(self.next_feature, attribute), 'non-matching attribute %s for %s' % (attribute, self.next_feature.gene_id)
 				exons += [(self.next_feature.left, self.next_feature.right)]
 		if gene.is_reverse: exons = exons[::-1] # reverse-strand genes have exons from TSS to TTS, not left to right
-#		assert gene.segments[0][0] == gene.left and gene.segments[-1][1] == gene.right
+#		if exons: assert exons[0][0] == gene.left and exons[-1][1] == gene.right, 'TSS/TTS not included in exons: %s' % self.next_feature.gene_id
+		introns = [(exons[i][1] + 1, exons[i + 1][0] - 1) for i in range(len(exons) - 1)]
 		
-		return GenomeFeature(reference_id = gene.reference_id, feature_type = gene.feature_type, left = gene.left, right = gene.right, is_reverse = gene.is_reverse, gene_id = gene.gene_id, gene_type = gene.gene_type, segments = exons)
+		return GenomeFeature(reference_id = gene.reference_id, feature_type = gene.feature_type, left = gene.left, right = gene.right, is_reverse = gene.is_reverse, gene_id = gene.gene_id, gene_type = gene.gene_type, segments = introns)
 	
 	def __iter__ (self):
 		return self
@@ -102,7 +103,7 @@ gtf = GtfParser(args.gtf_file, sam.references)
 
 
 genes = collections.deque()
-counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'wrong strand', 'in exon', '3\' end'])
+counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'wrong strand', 'intron', '3\' end'])
 gene_hit_counter = collections.Counter()
 
 
@@ -116,7 +117,7 @@ for raw_alignment in sam:
 		(args.ignoredup and raw_alignment.is_duplicate)
 	): continue
 
-	n_hit_gene = n_hit_sense = n_hit_exon = n_hit_end = 0
+	n_hit_gene = n_hit_sense = n_hit_intron = n_hit_end = 0
 	
 	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_id = None, gene_type = None, segments = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
 	
@@ -160,17 +161,20 @@ for raw_alignment in sam:
 			
 			if args.debug: print('\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
-			for exon in gene.segments:
-				if raw_alignment.get_overlap(exon[0] + 1, exon[1] + 1) > 0:
-					n_hit_exon += 1
-					if args.debug: print('\t\texon:\t\t%i\t%i' % exon, file = sys.stderr)
-				elif alignment.right < exon[0]: # completely to the left of this exon, so stop looking
+			# find intron hit (only counts one per gene)
+			for intron in gene.segments:
+				if raw_alignment.get_overlap(intron[0] + 1, intron[1] + 1) > 0:
+					n_hit_intron += 1
+					if args.debug: print('\t\tintron:\t\t%i\t%i' % intron, file = sys.stderr)
+					break
+				elif alignment.right < intron[0]: # completely to the left of this intron, so stop looking
 					break
 	
+	# update tallies
 	counts['total alignments'] +=   1
 	counts['no annotated gene'] +=  n_hit_gene == 0
 	counts['wrong strand'] +=       n_hit_gene > 0 and n_hit_sense == 0 # only if there were no hits on correct strand
-	counts['in exon'] +=            n_hit_exon > 0
+	counts['intron'] +=             n_hit_intron == n_hit_sense > 0 # only if there were no hits exclusively in exons (not sure if foolproof)
 	counts['3\' end'] +=						n_hit_end > 0
 
 
