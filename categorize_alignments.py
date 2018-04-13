@@ -101,10 +101,14 @@ genes = collections.deque()
 counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'in exon'])
 
 
+previous_alignment = None # saved only to verify sorting
 for raw_alignment in sam:
 	hit_gene = hit_sense = hit_exon = hit_intron = False
 	
 	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_id = None, gene_type = None, segments = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
+	
+	assert previous_alignment is None or (not feature_starts_before(alignment, previous_alignment)), 'alignments out of order: %s' % raw_alignment.query_name
+	previous_alignment = alignment
 	
 	if args.debug: print('%s\t%s:%i-%i' % (raw_alignment.query_name, raw_alignment.reference_name, alignment.left, alignment.right), file = sys.stderr)
 	if args.debug: print('\tbuffer: %i' % len(genes), file = sys.stderr)
