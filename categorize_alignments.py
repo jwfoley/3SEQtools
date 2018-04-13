@@ -87,7 +87,7 @@ class GtfParser:
 
 
 parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-d', '--debug', action = 'store_true')
+parser.add_argument('--debug', action = 'store_true')
 parser.add_argument('gtf_file', action = 'store', type = argparse.FileType('r'))
 parser.add_argument('bam_file', action = 'store', nargs = '?', type = str, default = '-')
 args = parser.parse_args()
@@ -99,6 +99,7 @@ gtf = GtfParser(args.gtf_file, sam.references)
 
 genes = collections.deque()
 counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'in exon'])
+gene_hit_counter = collections.Counter()
 
 
 previous_alignment = None # saved only to verify sorting
@@ -110,12 +111,12 @@ for raw_alignment in sam:
 	assert previous_alignment is None or (not feature_starts_before(alignment, previous_alignment)), 'alignments out of order: %s' % raw_alignment.query_name
 	previous_alignment = alignment
 	
-	if args.debug: print('%s\t%s:%i-%i' % (raw_alignment.query_name, raw_alignment.reference_name, alignment.left, alignment.right), file = sys.stderr)
+	if args.debug: print('%s\t\t\t%s\t%i\t%i' % (raw_alignment.query_name, raw_alignment.reference_name, alignment.left, alignment.right), file = sys.stderr)
 	if args.debug: print('\tbuffer: %i' % len(genes), file = sys.stderr)
 	
 	# remove genes that have already been passed
 	while genes and feature_completely_before(genes[0], alignment):
-		if args.debug: print('\tpopleft:\t%s\t%s:%i-%i' % (genes[0].gene_id, sam.references[genes[0].reference_id], genes[0].left, genes[0].right), file = sys.stderr)
+		if args.debug: print('\tpop:\t%s\t%s\t%i\t%i' % (genes[0].gene_id, sam.references[genes[0].reference_id], genes[0].left, genes[0].right), file = sys.stderr)
 		genes.popleft() # discard genes we have safely passed
 	
 	# add more genes until they're safely past this alignment
@@ -125,9 +126,9 @@ for raw_alignment in sam:
 			assert (not genes) or (not feature_starts_before(new_gene, genes[-1])), 'genes out of order in GTF: %s' % new_gene.gene_id
 			if not feature_completely_before(new_gene, alignment):
 				genes.append(new_gene)
-				if args.debug: print('\tappend:\t%s\t%s:%i-%i' % (new_gene.gene_id, sam.references[new_gene.reference_id], new_gene.left, new_gene.right), file = sys.stderr)
+				if args.debug: print('\tappend:\t%s\t%s\t%i\t%i' % (new_gene.gene_id, sam.references[new_gene.reference_id], new_gene.left, new_gene.right), file = sys.stderr)
 			else: # gene has already been passed
-				if args.debug: print('\tskip:\t%s\t%s:%i-%i' % (new_gene.gene_id, sam.references[new_gene.reference_id], new_gene.left, new_gene.right), file = sys.stderr)
+				if args.debug: print('\tskip:\t%s\t%s\t%i\t%i' % (new_gene.gene_id, sam.references[new_gene.reference_id], new_gene.left, new_gene.right), file = sys.stderr)
 		except StopIteration:
 			break
 	
@@ -142,11 +143,12 @@ for raw_alignment in sam:
 			(alignment.left < gene.left and alignment.right > gene.right) # gene is entirely inside the alignment!			
 		):
 			hit_gene = True
-			if args.debug: print('\thit:\t%s\t%s:%i-%i' % (gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
+			if args.debug: print('\thit:\t%s\t%s\t%i\t%i' % (gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
 			for exon in gene.segments:
 				if alignment.left >= exon[0] and alignment.right <= exon[1]: # completely inside this exon
 					hit_exon = True
+					if args.debug: print('\t\texon:\t\t%i\t%i' % exon, file = sys.stderr)
 					break
 				elif alignment.right < exon[0]: # completely to the left of this exon, so stop looking
 					break
