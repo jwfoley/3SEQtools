@@ -99,7 +99,7 @@ gtf = GtfParser(args.gtf_file, sam.references)
 
 
 genes = collections.deque()
-counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'in exon'])
+counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'wrong strand', 'in exon'])
 gene_hit_counter = collections.Counter()
 
 
@@ -113,7 +113,7 @@ for raw_alignment in sam:
 		(args.ignoredup and raw_alignment.is_duplicate)
 	): continue
 
-	hit_gene = hit_sense = hit_exon = hit_intron = False
+	hit_gene = hit_sense = hit_exon = 0
 	
 	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_id = None, gene_type = None, segments = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
 	
@@ -145,26 +145,23 @@ for raw_alignment in sam:
 	for gene in genes:
 		if feature_completely_before(alignment, gene): break # stop looking when the next gene is past this alignment
 			
-		# identify overlap (all possible cases)	
-		if (
-			(alignment.left >= gene.left and alignment.left <= gene.right) or
-			(alignment.right >= gene.left and alignment.right <= gene.right) or
-			(alignment.left < gene.left and alignment.right > gene.right) # gene is entirely inside the alignment!			
-		):
-			hit_gene = True
+		# identify overlap
+		if raw_alignment.get_overlap(gene.left + 1, gene.right + 1) > 0:
+			hit_gene += 1
+			hit_sense += alignment.is_reverse == gene.is_reverse			
 			if args.debug: print('\thit:\t%s\t%s\t%i\t%i' % (gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
 			for exon in gene.segments:
-				if alignment.left >= exon[0] and alignment.right <= exon[1]: # completely inside this exon
-					hit_exon = True
+				if raw_alignment.get_overlap(exon[0] + 1, exon[1] + 1) > 0:
+					hit_exon += 1
 					if args.debug: print('\t\texon:\t\t%i\t%i' % exon, file = sys.stderr)
-					break
 				elif alignment.right < exon[0]: # completely to the left of this exon, so stop looking
 					break
 	
-	counts['total alignments'] += 1
-	counts['no annotated gene'] += not hit_gene
-	counts['in exon'] += hit_exon
+	counts['total alignments'] +=   1
+	counts['no annotated gene'] +=  hit_gene == 0
+	counts['wrong strand'] +=       hit_gene > 0 and hit_sense == 0 # only if there were no hits on right strand
+	counts['in exon'] +=            hit_exon > 0
 
 
 for category, count in counts.items(): print('%s\t%i' % (category, count))
