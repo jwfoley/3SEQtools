@@ -211,20 +211,23 @@ for raw_alignment in sam:
 			
 			if args.debug: print('\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
-			# find intron hit (only counts one per gene)
-			for intron in gene.children:
-				if raw_alignment.get_overlap(intron.left + 1, intron.right + 1) > 0:
-					n_hit_intron += 1
-					if args.debug: print('\t\tintron:\t\t%i\t%i' % intron, file = sys.stderr)
-					break
-				elif alignment.right < intron[0]: # completely to the left of this intron, so stop looking
-					break
+			# find intron hit (only counts one per transcript)
+			for transcript in gene.children:
+				if feature_completely_before(transcript, alignment): continue
+				if feature_completely_before(alignment, transcript): break
+				for intron in transcript.children:
+					if raw_alignment.get_overlap(intron.left + 1, intron.right + 1) > 0:
+						n_hit_intron += 1
+						if args.debug: print('\t\tintron:\t\t%i\t%i' % intron, file = sys.stderr)
+						break
+					elif alignment.right < intron[0]: # completely to the left of this intron, so stop looking
+						break
 	
 	# update tallies
 	counts['total alignments'] +=   1
 	counts['no annotated gene'] +=  n_hit_gene == 0
 	counts['wrong strand'] +=       n_hit_gene > 0 and n_hit_sense == 0 # only if there were no hits on correct strand
-	counts['intron'] +=             n_hit_intron == n_hit_sense > 0 # only if there were no hits exclusively in exons (not sure if foolproof)
+	counts['intron'] +=             n_hit_intron == n_hit_sense > 0 # only if there were no transcripts that were hit without hitting introns (not sure if foolproof)
 	counts['3\' end'] +=						n_hit_end > 0
 
 
