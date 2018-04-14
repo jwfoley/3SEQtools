@@ -5,7 +5,7 @@ import re, collections, sys, argparse, pysam
 DEFAULT_END_DISTANCE = 500 # maximum distance from gene end that a read can start to be counted as 3' end
 
 
-GenomeFeature = collections.namedtuple('GenomeFeature', ['reference_id', 'feature_type', 'left', 'right', 'is_reverse', 'gene_id', 'gene_type', 'segments']) # this might be easier with a Python 3.7 data class
+GenomeFeature = collections.namedtuple('GenomeFeature', ['reference_id', 'feature_type', 'left', 'right', 'is_reverse', 'gene_id', 'transcript_id', 'gene_type', 'children']) # this might be easier with a Python 3.7 data class
 
 def feature_starts_before (feature1, feature2):
 	'''
@@ -25,19 +25,56 @@ def feature_completely_before (feature1, feature2):
 		(feature1.reference_id == feature2.reference_id and feature1.right < feature2.left)
 	)
 
+def get_introns (exons):
+	'''
+	return a list of introns, given exons, both as GenomeFeature instances
+	'''
+	introns = []
+	for i in range(len(exons) - 1):
+		for attribute in ['reference_id', 'is_reverse', 'gene_type', 'gene_id', 'transcript_id']: assert getattr(exons[i], attribute) == getattr(exons[i + 1], attribute), 'non-matching attribute %s for %s' % (attribute, exons[i].transcript_id)
+		assert exons[i + 1].left > exons[i].right + 1 # intron must have length of at least 1
+		introns += [GenomeFeature(
+			reference_id =   exons[i].reference_id,
+			feature_type =   'intron',
+			left =           exons[i].right + 1,
+			right =          exons[i + 1].left - 1,
+			is_reverse =     exons[i].is_reverse,
+			gene_type =      exons[i].gene_type,
+			gene_id =        exons[i].gene_id,
+			transcript_id =  exons[i].transcript_id,
+			children =       []
+		)]
+	return introns
+
+def make_transcript (transcript, exons):
+	'''
+	return a GenomeFeature for a transcript with introns as children
+	assumes exons are in right-to-left order for reverse-strand transcripts, and reverses that
+	'''
+	if transcript.is_reverse: exons = exons[::-1]
+	assert exons[0].left == transcript.left and exons[-1].right == transcript.right, 'incomplete exons in GTF: %s' % transcript.transcript_id
+	return GenomeFeature(reference_id = transcript.reference_id, feature_type = transcript.feature_type, left = transcript.left, right = transcript.right, is_reverse = transcript.is_reverse, gene_type = transcript.gene_type, gene_id = transcript.gene_id, transcript_id = transcript.transcript_id, children = get_introns(exons))
+
+def assert_attributes(attributes, feature1, feature2):
+	'''
+	assert two features match in all the given attributes
+	'''
+	for attribute in attributes: assert getattr(feature1, attribute) == getattr(feature2, attribute), 'non-matching %s in GTF: %s' % (attribute, feature1.gene_id)
+		
 
 class GtfParser:
 	'''
-	generator that yields GenomeFeature instances containing genes' feature data plus lists of introns (not exons as you might expect)
+	generator that yields GenomeFeature instances containing each gene's feature data plus a list of its transcripts, each of which is itself a GenomeFeature instance containing a list of its introns (not exons as you might expect)
+	gtf_file must be a file object (or stream of lines), not a file name
 	'''
 
 	def __init__ (self, gtf_file, ref_order):
 		self.ref_index = dict((ref_order[i], i) for i in range(len(ref_order)))
 		self.file = gtf_file
 		self.next_feature = None
-		self.readline()
+		self.read_feature()
 		
-	def readline (self):
+	def read_feature (self): # read another feature from the file and put it into self.next_feature
 		line = next(self.file).rstrip() # StopIteration is passed all the way up through __next__
 		while line.startswith('#'): line = next(self.file).rstrip()
 		fields = line.split('\t')
@@ -55,35 +92,48 @@ class GtfParser:
 			raise RuntimeError('bad strand')
 			
 		# quick and dirty parsing of specific other features instead of parsing all of them
-		gene_id = re.search('gene_id "(.*?)"', fields[8]).groups()[0]
 		gene_type = re.search('gene_type "(.*?)"', fields[8]).groups()[0]
+		gene_id = re.search('gene_id "(.*?)"', fields[8]).groups()[0]
+		try:
+			transcript_id = re.search('transcript "(.*?)"', fields[8]).groups()[0]
+		except AttributeError:
+			transcript_id = None
 		
 		assert left <= right, 'invalid coordinates in GTF: %s' % gene_id
-		assert self.next_feature is None or reference_id >= self.next_feature.reference_id, 'features out of order: %s' % gene_id # don't check left coordinate because it depends whether this is a child or parent feature and that's hard
+		assert self.next_feature is None or reference_id >= self.next_feature.reference_id, 'features out of order in GTF: %s' % gene_id # don't check left coordinate because it depends whether this is a child or parent feature and that's hard
 		
-		self.next_feature = GenomeFeature(reference_id = reference_id, feature_type = feature_type, left = left, right = right, is_reverse = is_reverse, gene_id = gene_id, gene_type = gene_type, segments = [])
+		self.next_feature = GenomeFeature(reference_id = reference_id, feature_type = feature_type, left = left, right = right, is_reverse = is_reverse, gene_type = gene_type, gene_id = gene_id, transcript_id = transcript_id, children = [])
 	
 	def __next__ (self):
 		if self.next_feature is None: raise StopIteration
 		assert self.next_feature.feature_type == 'gene'
 		gene = self.next_feature
+		transcript = None
+		transcripts = []
 		exons = []
 		while True:
 			try:
-				self.readline()
+				self.read_feature()
 			except StopIteration:
 				self.next_feature = None
 				break
 			if self.next_feature.feature_type == 'gene':
+				assert not feature_starts_before(self.next_feature, gene), 'genes out of order in GTF: %s' % self.next_feature.gene_id
+				if transcript is not None: transcripts += [make_transcript(transcript, exons)]
 				break
+						
+			elif self.next_feature.feature_type == 'transcript':
+				if transcript is not None: transcripts += [make_transcript(transcript, exons)]
+				assert_attributes(['reference_id', 'is_reverse', 'gene_type', 'gene_id'], gene, self.next_feature)
+				transcript = self.next_feature
+				exons = []
+			
 			elif self.next_feature.feature_type == 'exon':
-				for attribute in ['reference_id', 'is_reverse', 'gene_id', 'gene_type']: assert getattr(gene, attribute) == getattr(self.next_feature, attribute), 'non-matching attribute %s for %s' % (attribute, self.next_feature.gene_id)
-				exons += [(self.next_feature.left, self.next_feature.right)]
-		if gene.is_reverse: exons = exons[::-1] # reverse-strand genes have exons from TSS to TTS, not left to right
-#		if exons: assert exons[0][0] == gene.left and exons[-1][1] == gene.right, 'TSS/TTS not included in exons: %s' % self.next_feature.gene_id
-		introns = [(exons[i][1] + 1, exons[i + 1][0] - 1) for i in range(len(exons) - 1)]
+				assert transcript is not None, 'missing transcript definition for %s' % gene.gene_id
+				assert_attributes(['reference_id', 'is_reverse', 'gene_type', 'gene_id', 'transcript_id'], transcript, self.next_feature)
+				exons += [self.next_feature]
 		
-		return GenomeFeature(reference_id = gene.reference_id, feature_type = gene.feature_type, left = gene.left, right = gene.right, is_reverse = gene.is_reverse, gene_id = gene.gene_id, gene_type = gene.gene_type, segments = introns)
+		return GenomeFeature(reference_id = gene.reference_id, feature_type = gene.feature_type, left = gene.left, right = gene.right, is_reverse = gene.is_reverse, gene_type = gene.gene_type, transcript_id = None, gene_id = gene.gene_id, children = transcripts)
 	
 	def __iter__ (self):
 		return self
@@ -119,7 +169,7 @@ for raw_alignment in sam:
 
 	n_hit_gene = n_hit_sense = n_hit_intron = n_hit_end = 0
 	
-	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_id = None, gene_type = None, segments = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
+	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_type = None, gene_id = None, transcript_id = None, children = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
 	
 	assert previous_alignment is None or (not feature_starts_before(alignment, previous_alignment)), 'alignments out of order: %s' % raw_alignment.query_name
 	previous_alignment = alignment
@@ -162,8 +212,8 @@ for raw_alignment in sam:
 			if args.debug: print('\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
 			# find intron hit (only counts one per gene)
-			for intron in gene.segments:
-				if raw_alignment.get_overlap(intron[0] + 1, intron[1] + 1) > 0:
+			for intron in gene.children:
+				if raw_alignment.get_overlap(intron.left + 1, intron.right + 1) > 0:
 					n_hit_intron += 1
 					if args.debug: print('\t\tintron:\t\t%i\t%i' % intron, file = sys.stderr)
 					break
