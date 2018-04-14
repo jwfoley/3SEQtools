@@ -153,7 +153,7 @@ gtf = GtfParser(args.gtf_file, sam.references)
 
 
 genes = collections.deque()
-counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'wrong strand', 'intron', '3\' end'])
+counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated gene', 'ribosomal', 'wrong strand', 'intron', '3\' end'])
 gene_hit_counter = collections.Counter()
 
 
@@ -167,7 +167,7 @@ for raw_alignment in sam:
 		(args.ignoredup and raw_alignment.is_duplicate)
 	): continue
 
-	n_hit_gene = n_hit_sense = n_hit_intron = n_hit_end = 0
+	n_hit_gene = n_sense = n_ribosomal = n_hit_intron = n_hit_end = 0
 	
 	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_type = None, gene_id = None, transcript_id = None, children = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
 	
@@ -195,6 +195,7 @@ for raw_alignment in sam:
 		except StopIteration:
 			break
 	
+	
 	# search for gene hits
 	for gene in genes:
 		if feature_completely_before(alignment, gene): break # stop looking when the next gene is past this alignment
@@ -203,11 +204,14 @@ for raw_alignment in sam:
 		if raw_alignment.get_overlap(gene.left + 1, gene.right + 1) > 0:
 			n_hit_gene += 1
 			hit_sense = alignment.is_reverse == gene.is_reverse	
-			n_hit_sense += hit_sense
+			n_sense += hit_sense
 			n_hit_end += hit_sense and (
 				(not gene.is_reverse and alignment.left >= gene.right - args.end_distance + 2) or
 				(gene.is_reverse and alignment.right <= gene.left + args.end_distance)
 			)
+			if gene.gene_type == 'rRNA':
+				n_ribosomal += 1
+				break # not interested in intron hits with rRNA genes
 			
 			if args.debug: print('\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
@@ -223,13 +227,14 @@ for raw_alignment in sam:
 					elif alignment.right < intron[0]: # completely to the left of this intron, so stop looking
 						break
 	
-	# update tallies
+	# update tallies (fix logic)
 	counts['total alignments'] +=   1
 	counts['no annotated gene'] +=  n_hit_gene == 0
-	counts['wrong strand'] +=       n_hit_gene > 0 and n_hit_sense == 0 # only if there were no hits on correct strand
-	counts['intron'] +=             n_hit_intron == n_hit_sense > 0 # only if there were no transcripts that were hit without hitting introns (not sure if foolproof)
+	counts['wrong strand'] +=       n_hit_gene > 0 and n_sense == 0 # only if there were no hits on correct strand
+	counts['ribosomal'] +=          n_ribosomal == n_hit_gene > 0
+	counts['intron'] +=             n_hit_intron == n_sense > 0 # only if there were no transcripts that were hit without hitting introns (not sure if foolproof)
 	counts['3\' end'] +=						n_hit_end > 0
 
-
+#assert counts['total alignments'] == sum(count for category, count in counts.items() if not category == 'total alignments')
 for category, count in counts.items(): print('%s\t%i' % (category, count))
 
