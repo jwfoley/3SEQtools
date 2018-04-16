@@ -167,7 +167,7 @@ for raw_alignment in sam:
 		(args.ignoredup and raw_alignment.is_duplicate)
 	): continue
 
-	n_hit_gene = n_sense = n_ribosomal = n_sense_transcript = n_hit_intron = n_hit_end = 0
+	n_hit_transcript = n_sense = n_ribosomal = n_hit_intron = n_hit_end = 0
 	
 	alignment = GenomeFeature(reference_id = raw_alignment.reference_id, feature_type = 'alignment', left = raw_alignment.reference_start + 1, right = raw_alignment.reference_end + 1, is_reverse = raw_alignment.is_reverse, gene_type = None, gene_id = None, transcript_id = None, children = []) # left, right: pysam is 0-based but GTF is 1-based, so let's agree on 1-based
 	
@@ -203,12 +203,8 @@ for raw_alignment in sam:
 			
 		# identify overlap
 		if raw_alignment.get_overlap(gene.left + 1, gene.right + 1) > 0:
-			n_hit_gene += 1
-			if gene.gene_type == 'rRNA':
-				n_ribosomal += 1
-				break # not interested in details with rRNA genes
+			ribosomal = gene.gene_type == 'rRNA'
 			hit_sense = alignment.is_reverse == gene.is_reverse
-			n_sense += hit_sense
 			
 			if args.debug: print('\n\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
@@ -218,8 +214,9 @@ for raw_alignment in sam:
 				if feature_completely_before(alignment, transcript): break
 				if raw_alignment.get_overlap(transcript.left + 1, transcript.right + 1) == 0: continue # coordinates may overlap but no actual aligned bases do
 				if args.debug: print('\ttranscript:\t%s\t%s\t%i\t%i' % (transcript.transcript_id, sam.references[transcript.reference_id], transcript.left, transcript.right), file = sys.stderr)
+				n_ribosomal += ribosomal		
+				n_hit_sense += hit_sense
 				if not hit_sense: break # we don't care about introns if it's not sense, so we're just verifying that it did hit a transcript
-				n_sense_transcript += 1 # only count if sense
 				
 				# check for intron hits
 				for intron in transcript.children:
@@ -237,13 +234,13 @@ for raw_alignment in sam:
 				)
 	
 	# update tallies
-	if n_hit_gene == 0:
+	if n_hit_transcript == 0:
 		category = 'no annotated transcript'
 	elif n_sense == 0:
 		category = 'wrong strand'
-	elif n_ribosomal == n_hit_gene:
+	elif n_ribosomal == n_hit_transcript:
 		category = 'ribosomal'
-	elif n_hit_intron == n_sense_transcript:
+	elif n_hit_intron == n_sense:
 		category = 'intron'
 	elif n_hit_end > 0:
 		category = '3\' end'
