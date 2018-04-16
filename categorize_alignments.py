@@ -198,6 +198,7 @@ for raw_alignment in sam:
 	
 	# search for gene hits
 	for gene in genes:
+		if feature_completely_before(gene, alignment): continue # this will sometimes happen despite the deque flushing when a short gene is inside a long gene and the alignment is to the right of the short one
 		if feature_completely_before(alignment, gene): break # stop looking when the next gene is past this alignment
 			
 		# identify overlap
