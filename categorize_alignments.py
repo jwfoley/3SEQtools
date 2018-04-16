@@ -213,12 +213,10 @@ for raw_alignment in sam:
 			if args.debug: print('\n\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
 			
 			# find transcript hit
-			matched_transcript = False # check whether read matched a transcript in either orientation
 			for transcript in gene.children:
 				if feature_completely_before(transcript, alignment): continue
 				if feature_completely_before(alignment, transcript): break
 				if raw_alignment.get_overlap(transcript.left + 1, transcript.right + 1) == 0: continue # coordinates may overlap but no actual aligned bases do
-				matched_transcript = True
 				if args.debug: print('\ttranscript:\t%s\t%s\t%i\t%i' % (transcript.transcript_id, sam.references[transcript.reference_id], transcript.left, transcript.right), file = sys.stderr)
 				if not hit_sense: break # we don't care about introns if it's not sense, so we're just verifying that it did hit a transcript
 				n_sense_transcript += 1 # only count if sense
@@ -237,8 +235,6 @@ for raw_alignment in sam:
 					(not gene.is_reverse and alignment.left >= transcript.right - args.end_distance + 2) or
 					(gene.is_reverse and alignment.right <= gene.left + args.end_distance)
 				)
-					
-			assert matched_transcript
 	
 	# update tallies
 	if n_hit_gene == 0:
