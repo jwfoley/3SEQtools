@@ -220,19 +220,34 @@ for raw_alignment in sam:
 				if not hit_sense: break # we don't care about introns if it's not sense, so we're just verifying that it did hit a transcript
 				
 				# check for intron hits
+				hit_intron = False
 				for intron in transcript.children:
 					if raw_alignment.get_overlap(intron.left + 1, intron.right + 1) > 0:
+						hit_intron = True
 						n_hit_intron += 1
 						if args.debug: print('\t\tintron:\t\t%i\t%i' % (intron.left, intron.right), file = sys.stderr)
 						break # only count one intron hit (either yes, it hit introns, or no, it didn't)
 					elif feature_completely_before(alignment, intron): # completely to the right of this intron, so stop looking
 						break
 				
-				# check for 3'-end hit
-				n_hit_end += hit_sense and (
-					(not gene.is_reverse and alignment.left >= transcript.right - args.end_distance + 2) or
-					(gene.is_reverse and alignment.right <= gene.left + args.end_distance)
-				)
+				# check for 3'-end hit by computing the *spliced* distance from transcription termination site
+				if hit_intron: break # don't do this if it's not spliced anyway
+				if not gene.is_reverse:
+					spliced_distance = transcript.right - alignment.left
+					for intron in transcript.children[::-1]:
+						if feature_starts_before(alignment, intron):
+							spliced_distance -= intron.right - intron.left + 1
+						else:
+							break
+				else:
+					spliced_distance = alignment.right - transcript.left
+					for intron in transcript.children:
+						if feature_starts_before(intron, alignment):
+							spliced_distance -= intron.right - intron.left + 1
+						else:
+							break
+				n_hit_end += spliced_distance <= args.end_distance
+				if args.debug: print('\t\tspliced distance:\t\t\t%i' % spliced_distance)
 	
 	# update tallies
 	if n_hit_transcript == 0:
