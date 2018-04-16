@@ -225,7 +225,7 @@ for raw_alignment in sam:
 						n_hit_intron += 1
 						if args.debug: print('\t\tintron:\t\t%i\t%i' % (intron.left, intron.right), file = sys.stderr)
 						break # only count one intron hit (either yes, it hit introns, or no, it didn't)
-					elif alignment.right < intron[0]: # completely to the left of this intron, so stop looking
+					elif feature_completely_before(alignment, intron): # completely to the right of this intron, so stop looking
 						break
 				
 				# check for 3'-end hit
