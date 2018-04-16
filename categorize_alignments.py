@@ -215,7 +215,7 @@ for raw_alignment in sam:
 				if raw_alignment.get_overlap(transcript.left + 1, transcript.right + 1) == 0: continue # coordinates may overlap but no actual aligned bases do
 				if args.debug: print('\ttranscript:\t%s\t%s\t%i\t%i' % (transcript.transcript_id, sam.references[transcript.reference_id], transcript.left, transcript.right), file = sys.stderr)
 				n_ribosomal += ribosomal		
-				n_hit_sense += hit_sense
+				n_sense += hit_sense
 				if not hit_sense: break # we don't care about introns if it's not sense, so we're just verifying that it did hit a transcript
 				
 				# check for intron hits
