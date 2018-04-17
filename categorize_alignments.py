@@ -153,7 +153,7 @@ gtf = GtfParser(args.gtf_file, sam.references)
 
 
 genes = collections.deque()
-counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated transcript', 'ribosomal', 'wrong strand', 'intron', '3\' end', 'exon'])
+counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated transcript', 'ribosomal', 'wrong strand', 'intron', 'exon', '3\' end'])
 gene_hit_counter = collections.Counter()
 
 

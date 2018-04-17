@@ -22,11 +22,12 @@ names(graph.dims) <- c("width", "height")
 # define functions
 
 filename.suffix <- list(
-	trim =   ".trim.log",
-	align =  ".align.log",
-	dedup =  ".dedup.log",
-	bam =    ".bam",
-	bai =    ".bai"
+	trim =      ".trim.log",
+	align =     ".align.log",
+	dedup =     ".dedup.log",
+	category =  ".category.log",
+	bam =       ".bam",
+	bai =       ".bai"
 )
 
 category.colors <- c(
@@ -87,6 +88,16 @@ parse.dedup.log <- function(library.name) {
 	result
 }
 
+parse.alignment.categories <- function(library.name) {
+	log.file <- get.filename(library.name, "category")
+	if (! file.exists(log.file)) return(NULL)
+	log.list <- scan(log.file, list(character(), character()), sep = "\t", quote = "", strip.white = T, fill = T, quiet = T)
+	log.vector <- as.integer(log.list[[2]])
+	names(log.vector) <- log.list[[1]]
+	stopifnot(sum(log.vector[-1]) == log.vector[1])
+	log.vector
+}
+
 
 get.read.categories <- function(libraries) t(sapply(libraries, function(library.name) {
 	trim.results <- parse.trim.log(library.name)
@@ -96,6 +107,8 @@ get.read.categories <- function(libraries) t(sapply(libraries, function(library.
 }))
 
 get.dedup.counts <- function(libraries) t(sapply(libraries, parse.dedup.log))
+
+get.alignment.categories <- function(libraries) t(sapply(libraries, parse.alignment.categories))
 
 
 plot.read.categories <- function(read.category.counts, normalize = FALSE) {
@@ -133,6 +146,26 @@ plot.dedup <- function(dedup.counts) {
 		ylab("uniquely aligned reads") # y because flipped coordinates
 }
 
+plot.alignment.categories <- function(alignment.categories, normalize = TRUE) {
+	result.frame <- melt(alignment.categories[,-1], varnames = c("library", "category"), value.name = "alignments", as.is = T)
+	result.frame$library <- factor(result.frame$library, levels = rev(rownames(alignment.categories))) # reversed for flipped coordinates
+	result.frame$category <- factor(result.frame$category, levels = unique(result.frame$category))
+	if (normalize) {
+		ggplot(result.frame) +
+			geom_col(aes(library, alignments, fill = category), position = "fill", width = 1) +
+			scale_y_continuous(label = percent, expand = c(0, 0)) +
+			coord_flip() +	
+			graph.theme +
+			theme(panel.background = element_blank())
+	} else {
+		ggplot(result.frame) +
+			geom_col(aes(library, alignments, fill = category), width = 1) +
+			scale_y_continuous(label = comma, expand = c(0, 0)) +
+			coord_flip() +	
+			graph.theme
+	}
+}
+
 
 # run script on libraries provided as command-line arguments
 libraries <- opt$arg
@@ -152,11 +185,19 @@ if (length(libraries) > 0) {
 		rownames(dedup.counts) <- basename(rownames(dedup.counts))
 		dedup.count.plot <- plot.dedup(dedup.counts)
 	}
+	
+	alignment.category.counts <- get.alignment.categories(libraries)
+	have.alignment.categories <- any(! sapply(alignment.category.counts, is.null))
+	if (have.alignment.categories) {
+		rownames(alignment.category.counts) <- basename(rownames(alignment.category.counts))
+		alignment.category.plot <- plot.alignment.categories(alignment.category.counts)
+	}
 
 	save.image("qc_3seq.RData")
 	write.table(read.category.counts, "read_category_count.tsv", quote = F, sep = "\t", col.names = NA)
 	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 	if (have.dedup.counts) ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
+	if (have.alignment.categories) ggsave("alignment_categories.pdf", alignment.category.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 }
 
