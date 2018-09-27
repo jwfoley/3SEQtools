@@ -48,6 +48,10 @@ Makes a table of gene expression, including read counts, TPM, and optionally DES
 
 ## Quality-control scripts
 
+### `categorize_alignments.py`
+
+Categorizes alignments by their positions relative to annotated genes.
+
 ### `qc_3seq.R`
 
 Makes graphs and tables from the output (log files) of `align_smart-3seq.sh` or equivalent.
