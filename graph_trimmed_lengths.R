@@ -10,7 +10,7 @@ EXPECTED.FILE.SUFFIX <- "\\.trim\\.log$" # regular expression
 
 files <- commandArgs(trailingOnly = T)
 
-lengths <- do.call(rbind, lapply(files, function(file) {
+insert.lengths <- do.call(rbind, lapply(files, function(file) {
 	raw.file <- readLines(file)
 	result <- cbind(
 		library = sub(EXPECTED.FILE.SUFFIX, "", basename(file)),
@@ -20,13 +20,13 @@ lengths <- do.call(rbind, lapply(files, function(file) {
 	return(result)
 }))
 
-
-pdf("insert_lengths.pdf", width = 10, height = 7.5)
-ggplot(lengths, aes(length, proportion)) +
+insert.length.plot <- ggplot(insert.lengths, aes(length, proportion)) +
 		facet_wrap(~ library) + 
 		geom_area() +
 		xlab("insert length (nt)") +
 		ylab("reads") +
 		scale_y_continuous(label = percent)
-dev.off()
+
+save.image("insert_lengths.RData")
+ggsave("insert_lengths.pdf", insert.length.plot, "pdf", width = 10, height = 7.5)
 
