@@ -52,7 +52,7 @@ parser.add_argument('-p', '--homopolymer_length', action = 'store', type = int, 
 parser.add_argument('-m', '--mismatches', action = 'store', type = int, default = 1, help = 'number of allowed mismatches in stretch of A\'s')
 parser.add_argument('-n', '--no_trim', action = 'store_true', help = 'report trimmed lengths but leave homopolymer tails intact (better for aligners with soft-clipping)')
 parser.add_argument('-l', '--min_length', action = 'store', type = int, default = 1, help = 'minimum length of sequences to keep (after trimming)')
-parser.add_argument('-L', '--truncate_length', action = 'store', type = int, default = 0, help = 'length to truncate sequences (before trimming) , 0 for no truncation')
+parser.add_argument('-L', '--truncate_length', action = 'store', type = int, default = 0, help = 'length to truncate sequences (before trimming), 0 for no truncation')
 parser.add_argument('--bcl2fastq_trim_length', action = 'store', type = int, default = 35, help = 'length of the all-N reads generated when bcl2fastq trims below the threshold (--minimum-trimmed-read-length)')
 parser.add_argument('infile', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
 parser.add_argument('outfile', action = 'store', nargs = '?', type = argparse.FileType('w'), default = sys.stdout)
