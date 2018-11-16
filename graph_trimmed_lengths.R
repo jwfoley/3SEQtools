@@ -5,12 +5,13 @@
 library(ggplot2)
 library(scales)
 
-UMI.LENGTH <- 5
+TABLE.HEADER <- "trimmed read length counts"
 
 files <- commandArgs(trailingOnly = T)
 
 lengths <- do.call(rbind, lapply(files, function(file) {
-	result <- read.table(file, skip = 6 + UMI.LENGTH, col.names = c("length", "reads"))
+	raw.file <- readLines(file)
+	result <- read.table(textConnection(raw.file), skip = which(raw.file == TABLE.HEADER), col.names = c("length", "reads"))
 	result$proportion <- result$reads / sum(result$reads)
 	result$file <- file
 	return(result)

@@ -53,6 +53,7 @@ parser.add_argument('-m', '--mismatches', action = 'store', type = int, default 
 parser.add_argument('-n', '--no_trim', action = 'store_true', help = 'report trimmed lengths but leave homopolymer tails intact (better for aligners with soft-clipping)')
 parser.add_argument('-l', '--min_length', action = 'store', type = int, default = 1, help = 'minimum length of sequences to keep (after trimming)')
 parser.add_argument('-L', '--truncate_length', action = 'store', type = int, default = 0, help = 'length to truncate sequences (before trimming) , 0 for no truncation')
+parser.add_argument('-N', '--all_n_length', action = 'store', type = int, default = 35, help = 'length of all-N (failed) reads')
 parser.add_argument('infile', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
 parser.add_argument('outfile', action = 'store', nargs = '?', type = argparse.FileType('w'), default = sys.stdout)
 args = parser.parse_args()
@@ -61,9 +62,16 @@ assert(len(args.homopolymer_base) == 1)
 header_length = args.umi + args.g_overhang
 
 read_counter = 0
+all_n_counter = 0
 barcode_counter = [Counter() for i in range(args.umi)]
 read_length_counter = Counter()
 for name, seq, qualities in readfq(args.infile):
+	read_counter += 1
+
+	# check for all-N read
+	if len(seq) == args.all_n_length == seq.count('N'):
+		all_n_counter += 1
+		continue
 	
 	# truncate read
 	if args.truncate_length != 0:
@@ -91,11 +99,9 @@ for name, seq, qualities in readfq(args.infile):
 		seq = seq[header_length:polya_pos]
 		qualities = qualities[header_length:polya_pos]
 		args.outfile.write(writefq(name, seq, qualities))
-	
-	read_counter += 1
 
 # print read count
-print('%i reads processed\n' % read_counter, file = sys.stderr)
+print('%i reads processed\n%i contained only N\n' % (read_counter, all_n_counter), file = sys.stderr)
 
 # print barcode base frequency
 if args.umi > 0:
