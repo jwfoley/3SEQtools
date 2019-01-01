@@ -143,7 +143,7 @@ class GtfParser:
 parser = argparse.ArgumentParser(description = 'given a GTF file of transcript annotations and a BAM file of read alignments (both sorted by coordinate in the same order), count the number of reads in each of these categories: mitochondrial, no annotated transcript, wrong strand, ribosomal, intron, 3\' end', formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-d', '--ignoredup', action = 'store_true', help = 'ignore reads marked as duplicate')
 parser.add_argument('-e', '--end_distance', action = 'store', type = int, default = DEFAULT_END_DISTANCE, help = 'maximum distance from gene end to be considered 3\' ends')
-parser.add_argument('-c', '--category_list', action = 'store', type = str, help = 'optional output file to record category of each read')
+parser.add_argument('-c', '--category_list', action = 'store_true', help = 'output category of each read to stdout')
 parser.add_argument('--debug', action = 'store_true')
 parser.add_argument('gtf_file', action = 'store', type = argparse.FileType('r'))
 parser.add_argument('bam_file', action = 'store', nargs = '?', type = str, default = '-')
@@ -153,7 +153,6 @@ args = parser.parse_args()
 sam = pysam.Samfile(args.bam_file)
 mitochondrion_id = sam.get_tid(MITOCHONDRION_NAME)
 gtf = GtfParser(args.gtf_file, sam.references)
-category_list = (open(args.category_list, 'w') if args.category_list else None)
 
 
 genes = collections.deque()
@@ -273,7 +272,7 @@ for raw_alignment in sam:
 	else:
 		category = 'exon'
 	if args.debug: print('\n\t%s' % category, file = sys.stderr)
-	if category_list is not None: print('\t'.join((raw_alignment.query_name, category)), file = category_list)
+	if args.category_list: print('\t'.join((raw_alignment.query_name, category)))
 	counts[category] += 1
 	counts['total alignments'] +=   1
 	
