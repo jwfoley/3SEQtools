@@ -7,6 +7,8 @@
 # homopolymer region must be at least args.length bases long
 # homopolymer region may not contain two consecutive mismatches
 
+# warning! output may be slightly out of order because regions on different strands can overlap
+
 
 import re, argparse, sys
 
