@@ -143,7 +143,7 @@ class GtfParser:
 parser = argparse.ArgumentParser(description = 'given a GTF file of transcript annotations and a BAM file of read alignments (both sorted by coordinate in the same order), count the number of reads in each of these categories: mitochondrial, no annotated transcript, wrong strand, ribosomal, intron, 3\' end', formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-d', '--ignoredup', action = 'store_true', help = 'ignore reads marked as duplicate')
 parser.add_argument('-e', '--end_distance', action = 'store', type = int, default = DEFAULT_END_DISTANCE, help = 'maximum distance from gene end to be considered 3\' ends')
-parser.add_argument('-c', '--category_list', action = 'store_true', help = 'output category of each read to stdout')
+parser.add_argument('-c', '--category_list', action = 'store_true', help = 'output category of each read to stdout (disables summary)')
 parser.add_argument('--debug', action = 'store_true')
 parser.add_argument('gtf_file', action = 'store', type = argparse.FileType('r'))
 parser.add_argument('bam_file', action = 'store', nargs = '?', type = str, default = '-')
@@ -278,5 +278,6 @@ for raw_alignment in sam:
 	
 
 assert counts['total alignments'] == sum(count for category, count in counts.items() if not category == 'total alignments')
-for category, count in counts.items(): print('%s\t%i' % (category, count))
+if not args.category_list:
+	for category, count in counts.items(): print('%s\t%i' % (category, count))
 
