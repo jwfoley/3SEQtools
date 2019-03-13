@@ -4,6 +4,7 @@
 # optionally truncates reads to a specified length before further processing, to simulate results from sequencing fewer cycles
 # processes Smart-3SEQ data by trimming first $N_N+$N_G bases: $N_N (the random UMI) is appended to the read name, and $N_G (the G overhang) is discarded
 # call from directory where you want results to go
+# STAR requires a lot of memory, e.g. about 25 GB for the human genome
 # uses shared memory option in STAR; you may need to increase the kernel's shared memory limits (e.g. "sysctl -w kernel.shmmax=34359738368 kernel.shmall=8388608" in Linux)
 # creates temporary BAM files and then deduplicates them all in parallel
 # or you can disable deduplication with '-d'
