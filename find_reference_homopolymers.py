@@ -7,6 +7,8 @@
 # homopolymer region must be at least args.length bases long
 # homopolymer region may not contain two consecutive mismatches
 
+# warning! output may be slightly out of order because regions on different strands can overlap
+
 
 import re, argparse, sys
 
@@ -20,7 +22,7 @@ parser.add_argument('-l', '--length', action = 'store', type = int, default = 10
 parser.add_argument('-b', '--base', action = 'store', type = str, default = 'A', choices = sorted(COMPLEMENTS.keys()), help = 'target base')
 parser.add_argument('-u', '--upstream', action = 'store', type = int, default = 0, help = 'extend BED features this many bases upstream (left for + strand, right for - strand)')
 parser.add_argument('-d', '--downstream', action = 'store', type = int, default = 0, help = 'extend BED features this many bases downstream (right for + strand, left for - strand)')
-parser.add_argument('in_fastq', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
+parser.add_argument('in_fasta', action = 'store', nargs = '?', type = argparse.FileType('r'), default = sys.stdin)
 parser.add_argument('out_bed', action = 'store', nargs = '?', type = argparse.FileType('w'), default = sys.stdout)
 args = parser.parse_args()
 
@@ -28,19 +30,19 @@ target_base = args.base.upper()
 complement = COMPLEMENTS[target_base]
 
 
-def read_base (fastq): # simple generator that spits out (chr, pos, base) one at a time
-	for fastq_line in fastq:
-		fastq_line = fastq_line.rstrip()
-		if len(fastq_line) == 0: continue
+def read_base (fasta): # simple generator that spits out (chr, pos, base) one at a time
+	for fasta_line in fasta:
+		fasta_line = fasta_line.rstrip()
+		if len(fasta_line) == 0: continue
 		
-		match = re.match(CHR_HEADER, fastq_line)
+		match = re.match(CHR_HEADER, fasta_line)
 		
 		if match: # new chromosome header
 			current_pos = 0
 			chrom = match.group(1)
 		
 		else: # sequence data
-			for base in fastq_line:
+			for base in fasta_line:
 				current_pos += 1
 				yield (chrom, current_pos, base.upper())
 
@@ -69,7 +71,7 @@ region_start = [None, None]
 region_length = [0, 0]
 last_base_match = [False, False]
 
-for chrom, pos, base in read_base(args.in_fastq):
+for chrom, pos, base in read_base(args.in_fasta):
 	if chrom != current_chrom: # new chromosome
 		for strand in (0, 1):
 			process_region(current_chrom, strand, region_start[strand], region_length[strand], last_base_match[strand])

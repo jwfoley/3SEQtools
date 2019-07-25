@@ -3,6 +3,7 @@
 import re, collections, sys, argparse, pysam
 
 DEFAULT_END_DISTANCE = 500 # maximum distance from gene end that a read can start to be counted as 3' end
+MITOCHONDRION_NAME = 'chrM'
 
 
 GenomeFeature = collections.namedtuple('GenomeFeature', ['reference_id', 'feature_type', 'left', 'right', 'is_reverse', 'gene_id', 'transcript_id', 'gene_type', 'children']) # this might be easier with a Python 3.7 data class
@@ -139,9 +140,10 @@ class GtfParser:
 		return self
 
 
-parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser(description = 'given a GTF file of transcript annotations and a BAM file of read alignments (both sorted by coordinate in the same order), count the number of reads in each of these categories: mitochondrial, no annotated transcript, wrong strand, ribosomal, intron, 3\' end', formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-d', '--ignoredup', action = 'store_true', help = 'ignore reads marked as duplicate')
-parser.add_argument('-e', '--end_distance', action = 'store', type = int, default = DEFAULT_END_DISTANCE, help = 'maximum distance from gene end to be considered 3\' ends, default %i' % DEFAULT_END_DISTANCE)
+parser.add_argument('-e', '--end_distance', action = 'store', type = int, default = DEFAULT_END_DISTANCE, help = 'maximum distance from gene end to be considered 3\' ends')
+parser.add_argument('-c', '--category_list', action = 'store_true', help = 'output category of each read to stdout (disables summary)')
 parser.add_argument('--debug', action = 'store_true')
 parser.add_argument('gtf_file', action = 'store', type = argparse.FileType('r'))
 parser.add_argument('bam_file', action = 'store', nargs = '?', type = str, default = '-')
@@ -149,11 +151,12 @@ args = parser.parse_args()
 
 
 sam = pysam.Samfile(args.bam_file)
+mitochondrion_id = sam.get_tid(MITOCHONDRION_NAME)
 gtf = GtfParser(args.gtf_file, sam.references)
 
 
 genes = collections.deque()
-counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'no annotated transcript', 'ribosomal', 'wrong strand', 'intron', 'exon', '3\' end'])
+counts = collections.OrderedDict((category, 0) for category in ['total alignments', 'mitochondrial', 'no annotated transcript', 'ribosomal', 'wrong strand', 'intron', 'exon', '3\' end'])
 gene_hit_counter = collections.Counter()
 
 
@@ -195,62 +198,68 @@ for raw_alignment in sam:
 		except StopIteration:
 			break
 	
-	
-	# search for gene hits
-	for gene in genes:
-		if feature_completely_before(gene, alignment): continue # this will sometimes happen despite the deque flushing when a short gene is inside a long gene and the alignment is to the right of the short one
-		if feature_completely_before(alignment, gene): break # stop looking when the next gene is past this alignment
-			
-		# identify overlap
-		if raw_alignment.get_overlap(gene.left + 1, gene.right + 1) > 0:
-			ribosomal = gene.gene_type == 'rRNA'
-			hit_sense = alignment.is_reverse == gene.is_reverse
-			
-			if args.debug: print('\n\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
-			
-			# find transcript hit
-			for transcript in gene.children:
-				if feature_completely_before(transcript, alignment): continue
-				if feature_completely_before(alignment, transcript): break
-				if raw_alignment.get_overlap(transcript.left + 1, transcript.right + 1) == 0: continue # coordinates may overlap but no actual aligned bases do
-				if args.debug: print('\ttranscript:\t%s\t%s\t%i\t%i' % (transcript.transcript_id, sam.references[transcript.reference_id], transcript.left, transcript.right), file = sys.stderr)
-				n_hit_transcript += 1
-				n_ribosomal += ribosomal		
-				n_sense += hit_sense
-				if not hit_sense: break # we don't care about introns if it's not sense, so we're just verifying that it did hit a transcript
+	# skip if mitochondrial
+	if alignment.reference_id == mitochondrion_id:
+		mitochondrial = True
+	else:
+		mitochondrial = False
+		# search for gene hits
+		for gene in genes:
+			if feature_completely_before(gene, alignment): continue # this will sometimes happen despite the deque flushing when a short gene is inside a long gene and the alignment is to the right of the short one
+			if feature_completely_before(alignment, gene): break # stop looking when the next gene is past this alignment
 				
-				# check for intron hits
-				hit_intron = False
-				for intron in transcript.children:
-					if raw_alignment.get_overlap(intron.left + 1, intron.right + 1) > 0:
-						hit_intron = True
-						n_hit_intron += 1
-						if args.debug: print('\t\tintron:\t\t%i\t%i' % (intron.left, intron.right), file = sys.stderr)
-						break # only count one intron hit (either yes, it hit introns, or no, it didn't)
-					elif feature_completely_before(alignment, intron): # completely to the right of this intron, so stop looking
-						break
+			# identify overlap
+			if raw_alignment.get_overlap(gene.left + 1, gene.right + 1) > 0:
+				ribosomal = gene.gene_type == 'rRNA'
+				hit_sense = alignment.is_reverse == gene.is_reverse
 				
-				# check for 3'-end hit by computing the *spliced* distance from transcription termination site
-				if hit_intron: break # don't do this if it's not spliced anyway
-				if not gene.is_reverse:
-					spliced_distance = transcript.right - alignment.left
-					for intron in transcript.children[::-1]:
-						if feature_starts_before(alignment, intron):
-							spliced_distance -= intron.right - intron.left + 1
-						else:
-							break
-				else:
-					spliced_distance = alignment.right - transcript.left
+				if args.debug: print('\n\thit (%s):\t%s\t%s\t%i\t%i' % (('sense' if hit_sense else 'antisense'), gene.gene_id, sam.references[gene.reference_id], gene.left, gene.right), file = sys.stderr)
+				
+				# find transcript hit
+				for transcript in gene.children:
+					if feature_completely_before(transcript, alignment): continue
+					if feature_completely_before(alignment, transcript): break
+					if raw_alignment.get_overlap(transcript.left + 1, transcript.right + 1) == 0: continue # coordinates may overlap but no actual aligned bases do
+					if args.debug: print('\ttranscript:\t%s\t%s\t%i\t%i' % (transcript.transcript_id, sam.references[transcript.reference_id], transcript.left, transcript.right), file = sys.stderr)
+					n_hit_transcript += 1
+					n_ribosomal += ribosomal		
+					n_sense += hit_sense
+					if not hit_sense: break # we don't care about introns if it's not sense, so we're just verifying that it did hit a transcript
+					
+					# check for intron hits
+					hit_intron = False
 					for intron in transcript.children:
-						if feature_starts_before(intron, alignment):
-							spliced_distance -= intron.right - intron.left + 1
-						else:
+						if raw_alignment.get_overlap(intron.left + 1, intron.right + 1) > 0:
+							hit_intron = True
+							n_hit_intron += 1
+							if args.debug: print('\t\tintron:\t\t%i\t%i' % (intron.left, intron.right), file = sys.stderr)
+							break # only count one intron hit (either yes, it hit introns, or no, it didn't)
+						elif feature_completely_before(alignment, intron): # completely to the right of this intron, so stop looking
 							break
-				n_hit_end += spliced_distance <= args.end_distance
-				if args.debug: print('\t\tspliced distance:\t\t\t%i' % spliced_distance)
+					
+					# check for 3'-end hit by computing the *spliced* distance from transcription termination site
+					if hit_intron: break # don't do this if it's not spliced anyway
+					if not gene.is_reverse:
+						spliced_distance = transcript.right - alignment.left
+						for intron in transcript.children[::-1]:
+							if feature_starts_before(alignment, intron):
+								spliced_distance -= intron.right - intron.left + 1
+							else:
+								break
+					else:
+						spliced_distance = alignment.right - transcript.left
+						for intron in transcript.children:
+							if feature_starts_before(intron, alignment):
+								spliced_distance -= intron.right - intron.left + 1
+							else:
+								break
+					n_hit_end += spliced_distance <= args.end_distance
+					if args.debug: print('\t\tspliced distance:\t\t\t%i' % spliced_distance)
 	
 	# update tallies
-	if n_hit_transcript == 0:
+	if mitochondrial:
+		category = 'mitochondrial'
+	elif n_hit_transcript == 0:
 		category = 'no annotated transcript'
 	elif n_sense == 0:
 		category = 'wrong strand'
@@ -263,10 +272,12 @@ for raw_alignment in sam:
 	else:
 		category = 'exon'
 	if args.debug: print('\n\t%s' % category, file = sys.stderr)
+	if args.category_list: print('\t'.join((raw_alignment.query_name, category)))
 	counts[category] += 1
 	counts['total alignments'] +=   1
 	
 
 assert counts['total alignments'] == sum(count for category, count in counts.items() if not category == 'total alignments')
-for category, count in counts.items(): print('%s\t%i' % (category, count))
+if not args.category_list:
+	for category, count in counts.items(): print('%s\t%i' % (category, count))
 
