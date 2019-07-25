@@ -26,8 +26,8 @@ filename.suffix <- list(
 	align =     ".align.log",
 	dedup =     ".dedup.log",
 	category =  ".category.log",
-	cram =       ".cram",
-	crai =       ".crai"
+	bam =       ".bam",
+	bai =       ".bai"
 )
 
 category.colors <- c(
