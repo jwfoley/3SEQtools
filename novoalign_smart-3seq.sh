@@ -1,10 +1,8 @@
 #! /bin/bash
 
 # given a list of single-end Illumina FASTQ files and a reference genome, perform the special preprocessing for Smart-3SEQ, align each file to the reference with Novoalign 4, then index the BAM output
-# optionally truncates reads to a specified length before further processing, to simulate results from sequencing fewer cycles
 # processes Smart-3SEQ data by trimming first 8 or more bases: the first 5 are extracted as the UMI (RX and QX tags in SAM format), and the next 3 (or more) G's are discarded
 # call from directory where you want results to go
-# creates temporary BAM files and then deduplicates them all in parallel
 # or you can disable deduplication with '-d'
 
 samtools_path=samtools
