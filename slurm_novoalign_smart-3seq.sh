@@ -17,6 +17,7 @@ samtools_view_options='-u -@ $N_thread -F 0x4 -F 0x100 -F 0x200 -F 0x800' # remo
 samtools_sort_options="-l 9 -@ $N_thread -m $(($bam_mem / $N_thread))"
 samtools_index_options="-@ $N_thread"
 job_name=slurm_novoalign_smart-3seq
+time='8:00:00'
 mail_type='FAIL'
 
 
