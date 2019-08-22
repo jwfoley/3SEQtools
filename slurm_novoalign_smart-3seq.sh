@@ -13,7 +13,7 @@ bam_mem=2147483648 # maximum bytes of RAM to use for BAM sorting (in addition to
 fasta_suffix=.fa
 index_suffix=.ndx
 novoalign_options="-F ILM1.8 -o BAM -c $N_thread --tune NextSeq -5 XXXXXGGGGGGGGGG,8 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-samtools_view_options='-u -@ $N_thread -F 0x4 -F 0x100 -F 0x200 -F 0x800' # remove unaligned or undesirable reads
+samtools_view_options="-u -@ $N_thread -F 0x4 -F 0x100 -F 0x200 -F 0x800" # remove unaligned or undesirable reads
 samtools_sort_options="-l 9 -@ $N_thread -m $(($bam_mem / $N_thread))"
 samtools_index_options="-@ $N_thread"
 job_name=slurm_novoalign_smart-3seq
@@ -49,11 +49,11 @@ echo "#! /bin/bash
 	fastq=\${fastqs[\$SLURM_ARRAY_TASK_ID]}
 	rootname=\$(basename \$fastq .fastq.gz)
 	
-	$novoalign_path $novoalign_options -d $genome_prefix$index_suffix -f $fastq_file 2> \$wd/\$rootname.novoalign.log |
+	$novoalign_path $novoalign_options -d $genome_prefix$index_suffix -f $fastq_file 2> $wd/\$rootname.novoalign.log |
 		$samtools_path view $samtools_view_options |
 		$samtools_path sort $samtools_sort_options |
-		tee \$wd/\$rootname.bam |
-		$samtools_path index $samtools_index_options /dev/stdin \$wd/$rootname.bai
+		tee $wd/\$rootname.bam |
+		$samtools_path index $samtools_index_options /dev/stdin $wd/$rootname.bai
 	touch $wd/\$rootname.bai
 " | sbatch --array=0-$((${#fastq_files[@]} - 1)) --cpus-per-task=$N_thread --job-name=$job_name --output=$job_name.log --time=$time --mail-type=$mail_type
 
