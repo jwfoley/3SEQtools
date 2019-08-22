@@ -8,7 +8,7 @@
 samtools_path=samtools
 novoalign_path=novoalign4
 dedup_command="$HOME/umi-dedup/dedup.py -qs"
-N_thread=$(nproc)
+N_thread=8
 bam_mem=2147483648 # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
 fasta_suffix=.fa
 index_suffix=.ndx
