@@ -8,17 +8,18 @@
 samtools_path=samtools
 novoalign_path=novoalign4
 dedup_command="$HOME/umi-dedup/dedup.py -qs"
-N_thread=8
-bam_mem=2147483648 # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
+N_thread=4
+sort_mem=12884901888 # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
+sort_dir='$L_SCRATCH' # destination for temporary files created in BAM sorting
 fasta_suffix=.fa
 index_suffix=.ndx
 novoalign_options="-F ILM1.8 -o BAM -c $N_thread --tune NextSeq -5 XXXXXGGGGGGGGGG,8 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 samtools_view_options="-u -@ $N_thread -F 0x4 -F 0x100 -F 0x200 -F 0x800" # remove unaligned or undesirable reads
-samtools_sort_options="-l 9 -@ $N_thread -m $(($bam_mem / $N_thread))"
+samtools_sort_options="-l 9 -@ $N_thread -m $(($sort_mem / $N_thread)) -T $sort_dir/tmp"
 samtools_index_options="-@ $N_thread"
 job_name=slurm_novoalign_smart-3seq
 time='8:00:00'
-mail_type='FAIL'
+mail_type='END,FAIL'
 
 
 if [ ! -n "$2" ]
