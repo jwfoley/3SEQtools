@@ -49,11 +49,11 @@ echo "#! /bin/bash
 	fastq=\${fastqs[\$SLURM_ARRAY_TASK_ID]}
 	rootname=\$(basename \$fastq .fastq.gz)
 	
-	$novoalign_path $novoalign_options -d $genome_prefix$index_suffix -f $fastq_file 2> $wd/\$rootname.novoalign.log |
+	$novoalign_path $novoalign_options -d $genome_prefix$index_suffix -f \$fastq 2> $wd/\$rootname.novoalign.log |
 		$samtools_path view $samtools_view_options |
 		$samtools_path sort $samtools_sort_options |
 		tee $wd/\$rootname.bam |
-		$samtools_path index $samtools_index_options /dev/stdin $wd/$rootname.bai
+		$samtools_path index $samtools_index_options /dev/stdin $wd/\$rootname.bai
 	touch $wd/\$rootname.bai
 " | sbatch --array=0-$((${#fastq_files[@]} - 1)) --cpus-per-task=$N_thread --job-name=$job_name --output=$job_name.log --time=$time --mail-type=$mail_type
 
