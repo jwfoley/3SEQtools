@@ -11,9 +11,8 @@ bcl2fastq_cmd=bcl2fastq
 bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0'
 i5_only_regex='Smart-3SEQ 96-plex i5 indexing'
 i5_only_option='--use-bases-mask y*,n*,i*'
-rename_regex='s/_S[0-9]+_R1_001\.fastq\.gz$/.fastq.gz/'
+unwanted_name_regex='_S[0-9]+_R1_001'
 undetermined_filename='Undetermined_S0_R1_001.fastq.gz'
-
 
 sample_sheet=''
 discard_undetermined=true
@@ -39,10 +38,7 @@ fi
 run_folder="$1"
 shift 1
 
-if [ ! "$sample_sheet" ]
-then
-	sample_sheet="$run_folder/SampleSheet.csv"
-fi
+if [ ! "$sample_sheet" ]; then sample_sheet="$run_folder/SampleSheet.csv"; fi
 
 set -euo pipefail
 
@@ -57,7 +53,7 @@ $bcl2fastq_cmd $bcl2fastq_args -o . --stats-dir "$run_folder/Data/Intensities/Ba
 
 # clean up filenames
 if [ "$discard_undetermined" = true ]; then rm "$undetermined_filename"; fi
-for fastq in *.fastq.gz
-	do mv "$fastq" $(basename "$fastq" | sed -r $rename_regex)
+for fastq in $(ls *.fastq.gz | grep -P $unwanted_name_regex)
+	do mv "$fastq" $(sed -r "s/$unwanted_name_regex//" <<< "$fastq")
 done
 
