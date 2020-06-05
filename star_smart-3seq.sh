@@ -8,8 +8,8 @@
 
 
 N_thread=$(nproc)
-unzip_path='pigz -dc'
-umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py"
+unzip_path='pigz -dc' # if pigz is unavailable, use gzip (slower)
+umi_trim_path="pypy3 $(dirname $0)/umi_homopolymer.py" # if pypy3 is unavailable, use python3 (slower)
 umi_trim_options=(
 	'-n' # don't trim poly(A); let STAR do that
 )
