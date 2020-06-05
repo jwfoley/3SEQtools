@@ -128,7 +128,16 @@ do
 	
 	cp Log.final.out $wd/$rootname.align.log
 	if [ $make_bam ]; then touch $wd/$rootname.bai; fi # ensure the index is younger than the BAM to avoid warnings
-	if [ $gtf_file ]; then tail -n +3 counts | cut -f 1,7 > $wd/$rootname.counts.tsv; fi
+	
+	# generate count file with header
+	if [ $gtf_file ]
+	then
+		echo "# $umi_trim_path ${umi_trim_options[@]}" > $wd/$rootname.counts.tsv
+		echo "# $star_path ${star_options[@]} $star_bam_options --genomeDir $genome_dir" >> $wd/$rootname.counts.tsv
+		echo "# $count_path ${count_options[@]} -a $gtf_file" >> $wd/$rootname.counts.tsv
+		tail -n +3 counts | cut -f 1,7 >> $wd/$rootname.counts.tsv
+		mv counts.summary $wd/$rootname.counts.summary
+	fi
 	cd $wd
 	rm -rf $tmp_dir
 	
