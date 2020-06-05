@@ -18,6 +18,7 @@ star_options=(
 	'--readFilesIn /dev/stdin'
 	'--genomeLoad LoadAndKeep'
 	"--runThreadN $N_thread"
+	'--scoreGap -999' # don't infer unannotated splice junctions
 	'--outFilterMultimapNmax 1'
 	'--outFilterMismatchNmax 999' # don't exclude alignments with too many mismatches
 	'--clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' # trim poly(A)
