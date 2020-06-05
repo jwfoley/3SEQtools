@@ -2,26 +2,36 @@
 
 # given a list of single-end Illumina FASTQ files and a reference genome, perform the special preprocessing for Smart-3SEQ, align each file to the reference, then index the BAM output
 # optionally truncates reads to a specified length before further processing, to simulate results from sequencing fewer cycles
-# processes Smart-3SEQ data by trimming first $N_N+$N_G bases: $N_N (the random UMI) is appended to the read name, and $N_G (the G overhang) is discarded
-# call from directory where you want results to go
+# processes Smart-3SEQ data by trimming first 8 bases: first 5 (the random UMI) are appended to the read name, and next 3 (the G overhang) are discarded
+# writes output files to current working directory
 # STAR requires a lot of memory, e.g. about 25 GB for the human genome
 # uses shared memory option in STAR; you may need to increase the kernel's shared memory limits (e.g. "sysctl -w kernel.shmmax=34359738368 kernel.shmall=8388608" in Linux)
 # creates temporary BAM files and then deduplicates them all in parallel
 # or you can disable deduplication with '-d'
 
-samtools_path=samtools
-star_path=STAR
-parallel_path=parallel
-umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
-dedup_command="$HOME/umi-dedup/dedup.py -qs"
-unzip_path='pigz -dc'
 N_thread=$(nproc)
-bam_mem=2147483648 # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
-N_N=5
-N_G=3
-N_A=8
-N_mismatch=1
-star_options='--outFilterMultimapNmax 1 --outFilterMismatchNmax 999 --clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA --clip3pAdapterMMp 0.2' # no multimappers reported, no mismatch filter, and poly(A) clipped
+unzip_path='pigz -dc'
+umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py"
+umi_trim_options=(
+	'-n' # don't trim poly(A); let STAR do that
+)
+star_path=STAR
+star_options=(
+	'--readFilesIn /dev/stdin'
+	'--genomeLoad LoadAndKeep'
+	'--outSAMtype BAM SortedByCoordinate'
+	'--outStd BAM_SortedByCoordinate'
+	"--runThreadN $N_thread"
+	'--limitBAMsortRAM 2147483648' # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
+	'--outBAMcompression 10'
+	'--outFilterMultimapNmax 1'
+	'--outFilterMismatchNmax 999' # don't exclude alignments with too many mismatches
+	'--clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' # trim poly(A)
+	'--clip3pAdapterMMp 0.2' # trim poly(A) leniently
+)
+samtools_path=samtools
+parallel_path=parallel
+dedup_command="$HOME/umi-dedup/dedup.py -qs"
 
 
 truncate_arg=''
@@ -96,8 +106,8 @@ do
 	tmp_dir=$(mktemp -d --suffix .align_smart-3seq)
 	cd $tmp_dir
 	$unzip_path $fastq |
-		$umi_trim_path -u $N_N -g $N_G -p $N_A -m $N_mismatch $truncate_arg 2> $wd/$rootname.trim.log |
-		$star_path --genomeLoad LoadAndKeep --genomeDir $genome_dir --readFilesIn /dev/stdin --runThreadN $N_thread --outSAMtype BAM SortedByCoordinate --outStd BAM_SortedByCoordinate --outBAMcompression $compression_level --limitBAMsortRAM $bam_mem $star_options |
+		$umi_trim_path ${umi_trim_options[@]} $truncate_arg 2> $wd/$rootname.trim.log |
+		$star_path ${star_options[@]} --genomeDir $genome_dir |
 		tee $outbam |
 		eval $loop_index_command
 	eval $loop_touch_command
