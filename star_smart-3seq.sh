@@ -29,10 +29,18 @@ star_options=(
 	'--clip3pAdapterMMp 0.2' # trim poly(A) leniently
 )
 samtools_path=samtools
+count_path=featureCounts
+count_options=(
+	"-T $N_thread"
+	'-s 1' # correct strand orientation required
+	'--read2pos 5' # reduce each read to its 5'-most position to simplify overlap problems
+	'--primary' # use only primary alignments
+)
 
 
 truncate_arg=''
-while getopts ":n:g:t" opt
+gtf_file=''
+while getopts ":n:g:t:f:" opt
 do
 	case $opt in
 		n)
@@ -47,13 +55,17 @@ do
 			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid length to truncate" >&2; exit 1; fi
 			truncate_arg="-L $OPTARG"
 			;;
+		f)
+			gtf_file="$(readlink -f $OPTARG)"
+			if [ ! -e $gtf_file ]; then echo "error: $gtf_file not found" >&2; exit 1; fi
+			;;
 	esac
 done
 shift "$((OPTIND-1))"
 
 if [ ! -n "$2" ]
 then
-	echo "usage: $(basename $0) [-n umi_length] [-g discard_length] [-t truncate_length] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..." >&2
+	echo "usage: $(basename $0) [-n umi_length] [-g discard_length] [-t truncate_length] [-f annotations.gtf] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..." >&2
 	exit 1
 fi
 
@@ -87,9 +99,17 @@ do
 		$umi_trim_path ${umi_trim_options[@]} $truncate_arg 2> $wd/$rootname.trim.log |
 		$star_path ${star_options[@]} --genomeDir $genome_dir |
 		tee $wd/$rootname.bam |
-		$samtools_path index /dev/stdin $wd/$rootname.bai
+		tee >($samtools_path index /dev/stdin $wd/$rootname.bai) |
+		if [ $gtf_file ]
+		then
+			$count_path ${count_options[@]} -a $gtf_file -o counts 2> $wd/$rootname.count.log
+		else
+			cat > /dev/null # no-op to prevent pipe failure
+		fi
+	
 	touch $wd/$rootname.bai # ensure the index is younger than the BAM to avoid warnings
 	cp Log.final.out $wd/$rootname.align.log
+	if [ $gtf_file ]; then tail -n +3 counts | cut -f 1,7 > $wd/$rootname.counts.tsv; fi
 	cd $wd
 	rm -rf $tmp_dir
 	
