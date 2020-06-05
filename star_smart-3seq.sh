@@ -1,7 +1,6 @@
 #! /bin/bash
 
-# given a list of single-end Illumina FASTQ files and a reference genome, perform the special preprocessing for Smart-3SEQ, align each file to the reference, then index the BAM output
-# optionally truncates reads to a specified length before further processing, to simulate results from sequencing fewer cycles
+# given a list of single-end Illumina FASTQ files and a reference genome, perform the special preprocessing for Smart-3SEQ, align each file to the reference, then either generate a sorted BAM file and index, count gene hits, or both
 # processes Smart-3SEQ data by trimming first 8 bases: first 5 (the random UMI) are appended to the read name, and next 3 (the G overhang) are discarded
 # writes output files to current working directory
 # STAR requires a lot of memory, e.g. about 25 GB for the human genome
@@ -20,7 +19,7 @@ star_options=(
 	'--genomeLoad LoadAndKeep'
 	"--runThreadN $N_thread"
 	'--outFilterMultimapNmax 1'
-	'--outFilterMismatchNmax 999' # don't filter alignments with too many mismatches
+	'--outFilterMismatchNmax 999' # don't exclude alignments with too many mismatches
 	'--clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' # trim poly(A)
 	'--clip3pAdapterMMp 0.2' # trim poly(A) leniently
 )
@@ -45,24 +44,11 @@ count_options=(
 )
 
 
-truncate_arg=
 gtf_file=
 make_bam=
-while getopts ":n:g:t:f:b" opt
+while getopts ":f:b" opt
 do
 	case $opt in
-		n)
-			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid UMI length" >&2; exit 1; fi
-			N_N="$OPTARG"
-			;;
-		g)
-			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid discard length" >&2; exit 1; fi
-			N_G="$OPTARG"
-			;;
-		t)
-			if [[ $OPTARG != +([0-9]) ]]; then echo "error: $OPTARG is not a valid length to truncate" >&2; exit 1; fi
-			truncate_arg="-L $OPTARG"
-			;;
 		f)
 			gtf_file="$(readlink -f $OPTARG)"
 			if [ ! -e $gtf_file ]; then echo "error: $gtf_file not found" >&2; exit 1; fi
@@ -76,7 +62,12 @@ shift "$((OPTIND-1))"
 
 if [ ! -n "$2" ]
 then
-	echo "usage: $(basename $0) [-n umi_length] [-g discard_length] [-t truncate_length] [-f annotations.gtf] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ..." >&2
+	echo "
+usage: $(basename $0) [-f annotation.gtf] [-b] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ...
+
+-f annotation.gtf: count hits in genes from this annotation file (disables making BAM files)
+-b: make BAM files in addition to counting gene hits
+" >&2
 	exit 1
 fi
 
@@ -116,7 +107,7 @@ do
 	tmp_dir=$(mktemp -d --suffix .align_smart-3seq)
 	cd $tmp_dir
 	$unzip_path $fastq |
-		$umi_trim_path ${umi_trim_options[@]} $truncate_arg 2> $wd/$rootname.trim.log |
+		$umi_trim_path ${umi_trim_options[@]} 2> $wd/$rootname.trim.log |
 		$star_path ${star_options[@]} $star_bam_options --genomeDir $genome_dir |
 		tee >(
 			if [ $make_bam ]
@@ -134,8 +125,8 @@ do
 			cat > /dev/null # no-op to prevent pipe failure
 		fi
 	
-	touch $wd/$rootname.bai # ensure the index is younger than the BAM to avoid warnings
 	cp Log.final.out $wd/$rootname.align.log
+	if [ $make_bam ]; then touch $wd/$rootname.bai; fi # ensure the index is younger than the BAM to avoid warnings
 	if [ $gtf_file ]; then tail -n +3 counts | cut -f 1,7 > $wd/$rootname.counts.tsv; fi
 	cd $wd
 	rm -rf $tmp_dir
@@ -147,4 +138,6 @@ cd $genome_tmp_dir
 $star_path --genomeLoad Remove --genomeDir $genome_dir > /dev/null
 cd $wd
 rm -rf $genome_tmp_dir
+
+echo 'all done' >&2
 
