@@ -18,15 +18,22 @@ star_path=STAR
 star_options=(
 	'--readFilesIn /dev/stdin'
 	'--genomeLoad LoadAndKeep'
-	'--outSAMtype BAM SortedByCoordinate'
-	'--outStd BAM_SortedByCoordinate'
 	"--runThreadN $N_thread"
-	'--limitBAMsortRAM 2147483648' # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
-	'--outBAMcompression 10'
 	'--outFilterMultimapNmax 1'
 	'--outFilterMismatchNmax 999' # don't filter alignments with too many mismatches
 	'--clip3pAdapterSeq AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' # trim poly(A)
 	'--clip3pAdapterMMp 0.2' # trim poly(A) leniently
+)
+star_options_bam_true=( # STAR options if we are keeping the BAM file
+	'--outSAMtype BAM SortedByCoordinate'
+	'--outStd BAM_SortedByCoordinate'
+	'--limitBAMsortRAM 2147483648' # maximum bytes of RAM to use for BAM sorting (in addition to the memory usage of the reference index!)
+	'--outBAMcompression 10'
+)
+star_options_bam_false=( # STAR options if we are discarding the BAM file (no need to sort or compress)
+	'--outSAMtype BAM Unsorted'
+	'--outStd BAM_Unsorted'
+	'--outBAMcompression 0'
 )
 samtools_path=samtools
 count_path=featureCounts
@@ -38,9 +45,10 @@ count_options=(
 )
 
 
-truncate_arg=''
-gtf_file=''
-while getopts ":n:g:t:f:" opt
+truncate_arg=
+gtf_file=
+make_bam=
+while getopts ":n:g:t:f:b" opt
 do
 	case $opt in
 		n)
@@ -59,6 +67,9 @@ do
 			gtf_file="$(readlink -f $OPTARG)"
 			if [ ! -e $gtf_file ]; then echo "error: $gtf_file not found" >&2; exit 1; fi
 			;;
+		b)
+			make_bam=true
+			;;
 	esac
 done
 shift "$((OPTIND-1))"
@@ -76,6 +87,15 @@ shift 1
 
 
 set -euo pipefail
+
+
+if [ ! $gtf_file ]; then make_bam=true; fi
+if [ $make_bam ]
+then
+	star_bam_options=${star_options_bam_true[@]}
+else
+	star_bam_options=${star_options_bam_false[@]}
+fi
 
 
 genome_tmp_dir=$(mktemp -d --suffix .align_smart-3seq.genome)
@@ -97,9 +117,16 @@ do
 	cd $tmp_dir
 	$unzip_path $fastq |
 		$umi_trim_path ${umi_trim_options[@]} $truncate_arg 2> $wd/$rootname.trim.log |
-		$star_path ${star_options[@]} --genomeDir $genome_dir |
-		tee $wd/$rootname.bam |
-		tee >($samtools_path index /dev/stdin $wd/$rootname.bai) |
+		$star_path ${star_options[@]} $star_bam_options --genomeDir $genome_dir |
+		tee >(
+			if [ $make_bam ]
+			then
+				tee $wd/$rootname.bam |
+				$samtools_path index /dev/stdin $wd/$rootname.bai
+			else
+				cat > /dev/null # no-op to prevent pipe failure
+			fi
+		) |
 		if [ $gtf_file ]
 		then
 			$count_path ${count_options[@]} -a $gtf_file -o counts 2> $wd/$rootname.count.log
