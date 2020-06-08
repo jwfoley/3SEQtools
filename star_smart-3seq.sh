@@ -46,16 +46,16 @@ count_options=(
 
 
 gtf_file=
-make_bam=
-while getopts ":f:b" opt
+make_bam=true
+while getopts ":f:n" opt
 do
 	case $opt in
 		f)
 			gtf_file="$(readlink -f $OPTARG)"
 			if [ ! -e $gtf_file ]; then echo "error: $gtf_file not found" >&2; exit 1; fi
 			;;
-		b)
-			make_bam=true
+		n)
+			make_bam=
 			;;
 	esac
 done
@@ -64,13 +64,18 @@ shift "$((OPTIND-1))"
 if [ ! -n "$2" ]
 then
 	echo "
-usage: $(basename $0) [-f annotation.gtf] [-b] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ...
+usage: $(basename $0) [-f annotation.gtf] [-n] genome_dir file1.fastq.gz file2.fastq.gz file3.fastq.gz ...
 
--f annotation.gtf: count hits in genes from this annotation file (disables making BAM files)
--b: make BAM files in addition to counting gene hits
+-f annotation.gtf: count hits in genes from this annotation file
+-n: don't make BAM files
+
+If '-n' is used without '-f', the only output is log files from the trimmer and aligner.
 " >&2
 	exit 1
 fi
+
+
+set -euo pipefail
 
 
 wd=$(pwd)
@@ -78,10 +83,6 @@ genome_dir=$(readlink -f $1)
 shift 1
 
 
-set -euo pipefail
-
-
-if [ ! $gtf_file ]; then make_bam=true; fi
 if [ $make_bam ]
 then
 	star_bam_options=${star_options_bam_true[@]}
