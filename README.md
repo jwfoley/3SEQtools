@@ -21,7 +21,7 @@ Removes the poly(A) tail, moves the UMI to the read metadata, and discards the G
 
 ### `align_smart-3seq.sh`
 
-Starts from a list of single-end Illumina FASTQ files and aligns them into sorted, indexed, duplicate-marked BAM files. `samtools` and `STAR` are expected to be in your `PATH` and [UMI-dedup](https://github.com/jwfoley/umi-dedup) locally installed. You must provide the path to a prepared STAR genome directory. `pypy` and `pigz` are preferred for performance but not required. Note that STAR uses a lot of memory, e.g. about 25 GB for the human genome, so be sure to run this on a suitable computer.
+Starts from a list of single-end Illumina FASTQ files and aligns them into sorted, indexed, duplicate-marked BAM files. `samtools` and `STAR` are expected to be in your `PATH` and [UMI-dedup](https://github.com/jwfoley/umi-dedup) locally installed. You must provide the path to a prepared STAR genome directory. `pypy` and `zstd` are preferred for performance but not required. Note that STAR uses a lot of memory, e.g. about 25 GB for the human genome, so be sure to run this on a suitable computer.
 
 #### Options
 

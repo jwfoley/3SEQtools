@@ -8,7 +8,7 @@
 samtools_path=samtools
 salmon_path=salmon
 umi_trim_path="pypy $(dirname $0)/umi_homopolymer.py -n"
-unzip_path='pigz -dc'
+unzip_path='zstd -dc'
 N_N=5
 N_G=3
 N_A=8
