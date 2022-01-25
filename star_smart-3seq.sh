@@ -115,7 +115,7 @@ do
 	
 	tmp_dir=$(mktemp -d --suffix .align_smart-3seq)
 	cd $tmp_dir
-	$adapter_trim_path $fastq 2> $wd/$rootname.adapter.log |
+	$adapter_trim_path ${adapter_trim_options[@]} $fastq 2> $wd/$rootname.adapter.log |
 		$umi_trim_path ${umi_trim_options[@]} 2> $wd/$rootname.umi.log |
 		$star_path ${star_options[@]} $star_bam_options --genomeDir $genome_dir |
 		tee >(
