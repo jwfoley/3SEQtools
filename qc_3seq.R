@@ -22,7 +22,7 @@ names(graph.dims) <- c("width", "height")
 # define functions
 
 filename.suffix <- list(
-	trim =      ".trim.log",
+	trim =      ".umi.log",
 	align =     ".align.log",
 	dedup =     ".dedup.log",
 	category =  ".category.log",
@@ -36,7 +36,10 @@ category.colors <- c(
 	"other" =             "yellow3",
 	"too short" =         "yellow2",
 	"RT dimer" =          "darkred",
-	"PCR dimer" =         "red2",
+	"PCR dimer" =         "red2"
+)
+
+duplicate.colors <- c(
 	"duplicate" =         "orange",
 	"non-duplicate" =     "blue"
 )
@@ -140,7 +143,7 @@ plot.dedup <- function(dedup.counts) {
 	ggplot(result.frame) +
 		geom_col(aes(library, reads, fill = category), width = 1) +
 		scale_y_continuous(label = comma, expand = c(0, 0)) +
-		scale_fill_manual(values = category.colors) +
+		scale_fill_manual(values = duplicate.colors) +
 		coord_flip() +	
 		graph.theme +
 		ylab("uniquely aligned reads") # y because flipped coordinates
