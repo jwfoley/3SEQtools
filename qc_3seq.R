@@ -170,7 +170,7 @@ plot.alignment.categories <- function(alignment.categories, normalize = TRUE) {
 # run script on libraries provided as command-line arguments
 libraries <- opt$arg
 if (length(libraries) > 0) {
-	for (suffix in filename.suffix) libraries <- sub(suffix, "", libraries)
+	libraries <- sub(do.call(paste, c(as.list(gsub("\\.", "\\\\.", paste0(filename.suffix, "$"))), sep = "|")), "", libraries) # convert suffixes to a regex before removing them
 	cat("found libraries:\n")
 	for (library in libraries) cat(library, "\n")
 

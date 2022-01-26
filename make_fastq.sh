@@ -9,7 +9,7 @@
 
 bcl2fastq_cmd=bcl2fastq
 bcl2fastq_args='--fastq-compression-level 9 --no-lane-splitting --minimum-trimmed-read-length 0 --mask-short-adapter-reads 0'
-i5_only_regex='Smart-3SEQ 96-plex i5 indexing'
+i5_only_regex='i5 indexing'
 i5_only_option='--use-bases-mask y*,n*,i*'
 unwanted_name_regex='_S[0-9]+_R1_001'
 undetermined_filename='Undetermined_S0_R1_001.fastq.gz'
