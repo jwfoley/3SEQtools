@@ -30,13 +30,16 @@ filename.suffix <- list(
 	bai =       ".bai"
 )
 
-category.colors <- c(
+read.category.colors <- c(
 	"uniquely aligned" =  "green3",
 	"multiply aligned" =  "darkgreen",
 	"other" =             "yellow3",
 	"too short" =         "yellow2",
 	"RT dimer" =          "darkred",
-	"PCR dimer" =         "red2",
+	"PCR dimer" =         "red2"
+)
+
+dedup.category.colors <- c(
 	"duplicate" =         "orange",
 	"non-duplicate" =     "blue"
 )
@@ -78,13 +81,16 @@ parse.dedup.log <- function(library.name) {
 	log.file <- get.filename(library.name, "dedup")
 	if (! file.exists(log.file)) return(NULL)
 	log.list <- scan(log.file, list(character(), character()), sep = "\t", strip.white = T, fill = T, quiet = T)
-	log.vector <- as.integer(log.list[[1]])
+	log.vector <- log.list[[1]]
 	names(log.vector) <- log.list[[2]]
 	result <- c(
-		"duplicate" =      as.integer(log.vector["optical duplicates"] + log.vector["PCR duplicates"]),
-		"non-duplicate" =  as.integer(log.vector["distinct alignments"] + log.vector["pre-PCR duplicates rescued by UMIs"] + log.vector["pre-PCR duplicates rescued by algorithm"]	)
+		"duplicate" =       as.integer(log.vector["optical duplicates"]) + as.integer(log.vector["PCR duplicates"]),
+		"non-duplicate" =   as.integer(log.vector["distinct alignments"]) + as.integer(log.vector["pre-PCR duplicates rescued by UMIs"]) + as.integer(log.vector["pre-PCR duplicates rescued by algorithm"]),
+		"entropy.before" =  as.numeric(log.vector["library entropy before deduplication"]),
+		"entropy.after" =   as.numeric(log.vector["library entropy after deduplication"]),
+		"library.size" =    as.integer(log.vector["estimated library size"])
 	)
-	stopifnot(sum(result) == log.vector["usable alignments read"])
+	stopifnot(sum(result["duplicate"], result["non-duplicate"]) == as.integer(log.vector["usable alignments read"]))
 	result
 }
 
@@ -106,7 +112,7 @@ get.read.categories <- function(libraries) t(sapply(libraries, function(library.
   c(trim.results, align.results[-1])
 }))
 
-get.dedup.counts <- function(libraries) t(sapply(libraries, parse.dedup.log))
+get.dedup.results <- function(libraries) t(sapply(libraries, parse.dedup.log))
 
 get.alignment.categories <- function(libraries) t(sapply(libraries, parse.alignment.categories))
 
@@ -120,7 +126,7 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 			geom_col(aes(library, reads, fill = category), position = "fill", width = 1) +
 			scale_y_continuous(label = percent, expand = c(0, 0)) +
 			coord_flip() +
-			scale_fill_manual(values = category.colors) +
+			scale_fill_manual(values = read.category.colors) +
 			graph.theme +
 			theme(panel.background = element_blank())
 	} else {
@@ -128,22 +134,41 @@ plot.read.categories <- function(read.category.counts, normalize = FALSE) {
 			geom_col(aes(library, reads, fill = category), width = 1) +
 			scale_y_continuous(label = comma, expand = c(0, 0)) +
 			coord_flip() +
-			scale_fill_manual(values = category.colors) +
+			scale_fill_manual(values = read.category.colors) +
 			graph.theme
 	}
 }
 
-plot.dedup <- function(dedup.counts) {
-	result.frame <- melt(dedup.counts, varnames = c("library", "category"), value.name = "reads", as.is = T)
-	result.frame$library <- factor(result.frame$library, levels = rev(rownames(dedup.counts))) # reversed for flipped coordinates
-	result.frame$category <- factor(result.frame$category, levels = c("duplicate", "non-duplicate"))
-	ggplot(result.frame) +
+plot.dedup <- function(dedup.results) {
+	count.frame <- melt(dedup.results[,c("duplicate", "non-duplicate")], varnames = c("library", "category"), value.name = "reads", as.is = T)
+	count.frame$library <- factor(count.frame$library, levels = rev(rownames(dedup.results))) # reversed for flipped coordinates
+	count.frame$category <- factor(count.frame$category, levels = c("duplicate", "non-duplicate"))
+	
+	estimate.frame <- data.frame(
+		x = 1:nrow(dedup.results) - 1/2,
+		xend = 1:nrow(dedup.results) + 1/2,
+		y = rev(dedup.results[,"library.size"]) # reversed because plotting coordinate is reversed
+	)
+	
+	ggplot(count.frame) +
 		geom_col(aes(library, reads, fill = category), width = 1) +
 		scale_y_continuous(label = comma, expand = c(0, 0)) +
-		scale_fill_manual(values = category.colors) +
-		coord_flip() +	
+		scale_fill_manual(values = dedup.category.colors) +
+		coord_flip() +
 		graph.theme +
-		ylab("uniquely aligned reads") # y because flipped coordinates
+		ylab("uniquely aligned reads") + # y because flipped coordinates
+		geom_segment(aes(x = x, xend = xend, y = y, yend = y), data = estimate.frame)
+}
+
+plot.entropy <- function(dedup.results) {
+	entropy.frame <- melt(dedup.results[,c("entropy.before", "entropy.after")], varnames = c("library", "category"), value.name = "entropy", as.is = T)
+	entropy.frame$library <- factor(entropy.frame$library, levels = rev(rownames(dedup.results))) # reversed for flipped coordinates
+	
+	ggplot(entropy.frame) +
+		geom_point(aes(library, entropy, color = category)) +
+		coord_flip() +
+		graph.theme +
+		ylab("entropy of reads per position") # y because flipped coordinates
 }
 
 plot.alignment.categories <- function(alignment.categories, normalize = TRUE) {
@@ -179,11 +204,12 @@ if (length(libraries) > 0) {
 	read.category.count.plot <- plot.read.categories(read.category.counts)
 	read.category.percent.plot <- plot.read.categories(read.category.counts, normalize = T)
 	
-	dedup.counts <- get.dedup.counts(libraries)
-	have.dedup.counts <- any(! sapply(dedup.counts, is.null))
-	if (have.dedup.counts) {
-		rownames(dedup.counts) <- basename(rownames(dedup.counts))
-		dedup.count.plot <- plot.dedup(dedup.counts)
+	dedup.results <- get.dedup.results(libraries)
+	have.dedup.results <- any(! sapply(dedup.results, is.null))
+	if (have.dedup.results) {
+		rownames(dedup.results) <- basename(rownames(dedup.results))
+		dedup.count.plot <- plot.dedup(dedup.results)
+		dedup.entropy.plot <- plot.entropy(dedup.results)
 	}
 	
 	alignment.category.counts <- get.alignment.categories(libraries)
@@ -197,7 +223,10 @@ if (length(libraries) > 0) {
 	write.table(read.category.counts, "read_category_count.tsv", quote = F, sep = "\t", col.names = NA)
 	ggsave("read_category_count.pdf", read.category.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 	ggsave("read_category_percent.pdf", read.category.percent.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
-	if (have.dedup.counts) ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
+	if (have.dedup.results) {
+		ggsave("dedup.pdf", dedup.count.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
+		ggsave("entropy.pdf", dedup.entropy.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
+	}
 	if (have.alignment.categories) ggsave("alignment_categories.pdf", alignment.category.plot, "pdf", width = graph.dims$width, height = graph.dims$height)
 }
 
