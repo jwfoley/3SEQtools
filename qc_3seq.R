@@ -58,8 +58,8 @@ parse.trim.log <- function(library.name) {
 	close(trim.log)
 	c(
 		"total" =      total.reads,
-		"PCR dimer" =  sum(subset(length.counts, length < 0)$count),
-		"RT dimer" =  subset(length.counts, length == 0)$count
+		"PCR dimer" =  if(all(length.counts$length >= 0)) 0 else sum(subset(length.counts, length < 0)$count),
+		"RT dimer" =   if(! 0 %in% length.counts$length) 0 else subset(length.counts, length == 0)$count
 	)
 }
 
