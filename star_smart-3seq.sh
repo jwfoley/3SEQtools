@@ -4,19 +4,21 @@
 # preprocesses Smart-3SEQ data by trimming first 8 bases: first 5 (the random UMI) are appended to the read name, and next 3 (the G overhang) are discarded
 # trailing P7 adapter sequence and poly(A) from the 1S primer are both removed as well
 # writes output files to current working directory
-# STAR requires a lot of memory, e.g. about 25 GB for the human genome
+# STAR requires a lot of memory, e.g. about 30 GB for the human genome
 # uses shared memory option in STAR; you may need to increase the kernel's shared memory limits (e.g. "sysctl -w kernel.shmmax=34359738368 kernel.shmall=8388608" in Linux)
 
 
+ulimitn=1048576 # for ulimit -n: STAR needs a lot of temporary filehandles for sorting
+N_job=1 # you may increase this, and decrease N_thread accordingly, if STAR is not parallelized well enough to make full use of your CPU (e.g. more than ~20 logical cores); note the reference genome is shared, so marginal memory requirement depends only on FASTQ size
 N_thread=$(nproc)
 adapter_trim_path=cutadapt
 adapter_trim_options=(
 	'-n 2' # trim both sequences from the same read if applicable
-	'-a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA' # TruSeq P7 adapter sequence (if you haven't already trimmed it in bcl2fastq)
-	'-a AAAAAAAAACAAAAAAAAACAAAAAAAAAA' # reinforced poly(A) from Smart-3SEQ version 2; for version 1, this is simply a homopolymer, but use a shorter sequence (e.g. AAAAAAAAAA) otherwise sequencing errors may create false negatives
+	'-a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA' # TruSeq P7 adapter sequence (assumes you haven't already trimmed it in bcl2fastq!)
+	'-a AAAAAAAAA' # shortened because sequencing errors may create false negatives
 	"-j $N_thread"
 )
-umi_trim_path="pypy3 $(dirname $0)/extract_umi.py" # if pypy3 is unavailable, use python3 (slower)
+umi_trim_path="pypy3 $(dirname $0)/extract_umi.py" # if pypy3 is unavailable, substitute python3 (slower)
 umi_trim_options=(
 	'-u 5' # UMI is 5 nt
 	'-g 3' # G-overhang is 3 nt
@@ -52,17 +54,17 @@ count_options=(
 )
 
 
-gtf_file=
-make_bam=true
+export gtf_file=
+export make_bam=true
 while getopts ":f:n" opt
 do
 	case $opt in
 		f)
-			gtf_file="$(readlink -f $OPTARG)"
+			export gtf_file="$(readlink -f $OPTARG)"
 			if [ ! -e $gtf_file ]; then echo "error: $gtf_file not found" >&2; exit 1; fi
 			;;
 		n)
-			make_bam=
+			export make_bam=
 			;;
 	esac
 done
@@ -83,18 +85,21 @@ fi
 
 
 set -euo pipefail
+ulimit -n $ulimitn
 
-
-wd=$(pwd)
-genome_dir=$(readlink -f $1)
+export wd=$(pwd)
+export genome_dir=$(readlink -f $1)
 shift 1
 
-
+export adapter_trim_command="$adapter_trim_path ${adapter_trim_options[@]}"
+export umi_trim_command="$umi_trim_path ${umi_trim_options[@]}"
+export count_command="$count_path ${count_options[@]} -a $gtf_file"
+export index_command="$samtools_path index"
 if [ $make_bam ]
 then
-	star_bam_options=${star_options_bam_true[@]}
+	export star_command="$star_path ${star_options[@]} ${star_options_bam_true[@]} --genomeDir $genome_dir"
 else
-	star_bam_options=${star_options_bam_false[@]}
+	export star_command="$star_path ${star_options[@]} ${star_options_bam_false[@]} --genomeDir $genome_dir"
 fi
 
 
@@ -106,30 +111,28 @@ cd $wd
 echo 'done' >&2
 
 
-for fastq_file in "$@"
-do
-	rootname=$(basename $fastq_file .fastq.gz)
-	fastq=$(readlink -f $fastq_file)
-	
-	echo -n "aligning $rootname... " >&2
+parallel -j $N_job --session '
+	set -euo pipefail
+	rootname=$(basename {} .fastq.gz)
+	fastq=$(readlink -f {})
 	
 	tmp_dir=$(mktemp -d --suffix .align_smart-3seq)
 	cd $tmp_dir
-	$adapter_trim_path ${adapter_trim_options[@]} $fastq 2> $wd/$rootname.adapter.log |
-		$umi_trim_path ${umi_trim_options[@]} 2> $wd/$rootname.umi.log |
-		$star_path ${star_options[@]} $star_bam_options --genomeDir $genome_dir |
+	$adapter_trim_command $fastq 2> $wd/$rootname.adapter.log |
+		$umi_trim_command 2> $wd/$rootname.umi.log |
+		$star_command |
 		tee >(
 			if [ $make_bam ]
 			then
 				tee $wd/$rootname.bam |
-				$samtools_path index /dev/stdin $wd/$rootname.bai
+				$index_command /dev/stdin $wd/$rootname.bai
 			else
 				cat > /dev/null # no-op to prevent pipe failure
 			fi
 		) |
 		if [ $gtf_file ]
 		then
-			$count_path ${count_options[@]} -a $gtf_file -o counts 2> $wd/$rootname.count.log
+			$count_command -o counts 2> $wd/$rootname.count.log
 		else
 			cat > /dev/null # no-op to prevent pipe failure
 		fi
@@ -141,18 +144,18 @@ do
 	if [ $gtf_file ]
 	then
 		echo "# $fastq" > $wd/$rootname.counts.tsv
-		echo "# $adapter_trim_path ${adapter_trim_options[@]}" >> $wd/$rootname.counts.tsv
-		echo "# $umi_trim_path ${umi_trim_options[@]}" >> $wd/$rootname.counts.tsv
-		echo "# $star_path ${star_options[@]} $star_bam_options --genomeDir $genome_dir" >> $wd/$rootname.counts.tsv
-		echo "# $count_path ${count_options[@]} -a $gtf_file" >> $wd/$rootname.counts.tsv
+		echo "# $adapter_trim_command" >> $wd/$rootname.counts.tsv
+		echo "# $umi_trim_command" >> $wd/$rootname.counts.tsv
+		echo "# $star_command" >> $wd/$rootname.counts.tsv
+		echo "# $count_command" >> $wd/$rootname.counts.tsv
 		tail -n +3 counts | cut -f 1,7 >> $wd/$rootname.counts.tsv
 		mv counts.summary $wd/$rootname.counts.summary
 	fi
 	cd $wd
 	rm -rf $tmp_dir
 	
-	echo 'done' >&2
-done
+	echo "aligned $rootname" >&2
+' ::: "$@"
 
 cd $genome_tmp_dir
 $star_path --genomeLoad Remove --genomeDir $genome_dir > /dev/null
